@@ -2,4 +2,4 @@
 Time, curious time.
 
 
-Perspective on evaluating how changes in total abundance and functional composition modulate temporal trends in ecological community function.
+Perspective on evaluating the temporal dynamics of multiple, interrelated dimensions of community function.
