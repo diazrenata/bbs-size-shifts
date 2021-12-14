@@ -8,7 +8,7 @@ library(BBSsize)
 run_hpg = T
 #max_caps <- c(75, 150, 225, 300, 375, 450, 528)
 # for(i in 1:length(max_caps)) {
-source(here::here("analyses", "hasty_fxns.R"))
+source(here::here("analyses", "fxns", "hasty_fxns.R"))
 #i = 1
 datasets <- MATSS::build_bbs_datasets_plan()
 
