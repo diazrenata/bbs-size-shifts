@@ -1,0 +1,70 @@
+---
+output:
+  # word_document:
+  #   reference_docx: default_gdoc.docx
+  #   df_print: kable
+  # html_document:
+  #   df_print: kable
+  pdf_document: 
+    df_print: kable
+csl: ecology.csl
+bibliography: refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, include = F, results = F, message = F, warning = F, eval = T, fig.dim = c(3.5, 2))
+library(dplyr)
+library(BBSsize)
+library(rwar)
+library(tidybayes)
+library(multipanelfigure)
+library(ggplot2)
+theme_set(theme_bw())
+# dat <- MATSS::get_bbs_route_region_data(route = 224, region = 3)
+# load(here::here("results", "results_objects", "portable_results_compare.Rds"))
+# load(here::here("results", "results_objects", "portable_comps_all.Rds"))
+```
+
+
+# Methods
+
+## Bird abundance data
+
+We used data from the Breeding Bird Survey [@sauer2013] to evaluate trends in abundance, biomass, and energy use. BBS (BBS methods background). We explored trends in abundance, biomass, and energy use over the 30-year time period from 1988-2018. We selected these years to provide a temporal window sufficient to detect trends (@cusser2020), while allowing for a substantial number of routes. To avoid irregularities caused by missing time steps, we restricted the main analysis to routes that had been sampled every year from 1988-2018 (n = 350), and compared these results to a more inclusive selection of routes that were sampled in at least 25 of 30 years in this window (n >1000).  We take the route to be the "community" scale [@thibault2011; others]. We filtered the data to remove taxa that are poorly sampled through these methods, following (literally everyone). We accessed the data, and performed this preliminary cleaning and filtering, using the R package `MATSS` [@ye2020]. 
+
+##  Estimated size data
+
+BBS contains abundances for all species along a route in each year, but does not include measurements of individual body size. We generated body size estimates for individual birds assuming that intraspecific size distributions are normally distributed around a species’ mean body size (following @thibault2011). Using records of species’ mean and standard deviation body sizes from @dunning2008, we drew individuals’ body sizes from the appropriate normal distributions. For species for which there was not a standard deviation recorded in @dunning2008 (185 species affected, of 421 total), we estimated the standard deviation based on an allometric scaling relationship between mean and standard deviation in body mass ($log(variance) = -5.273 + (log(mass) * 1.995))$; model R2 .86; see also @thibault2011). For species with multiple records in @dunning2008, we used the mean mean and standard deviation body sizes across all records (averaging across sexes, subspecies, and records from different locations). We performed this averaging after estimating any missing standard deviation measurements. For each individual bird observed, we estimated metabolic rate as $10.5 * (mass ^.713)$ [@fristoe2015; @nagy2005; @mcnab2009]. For each route in a given year, we compute total energy use, total biomass, and total abundance by summing over all individuals observed on that route in that year. This method does not incorporate intraspecific variation in body size across geographies or over time [@dunning2008; @gardner2011]. However, it makes it possible to conduct macroecological studies of avian size distributions at a spatial and temporal scale that would otherwise be impossible [@thibault2011].
+
+## Comparing abundance- and size- based currencies
+
+Comparing trends across different currencies is a nontrivial statistical challenge. Because different currencies vary widely in their units of measure (e.g. abundance in the hundreds of individuals; total biomass in the thousands of grams), it is challenging to interpret differences in magnitude of slope across different currencies. Transformation and scaling using common approaches (such as a square-root transform or rescaling each currency to a mean of 0 and a standard deviation of 1; @gotelli2017; @dornelas2014) destroys information about the degree of variability within each currency. 
+
+Rather than attempting to compare slopes across currencies or to transform different currencies to a common scale, I use a simple null model to compare the observed dynamics for biomass and energy use to the dynamics that would occur in a scenario in which the species (and therefore size) composition of the community was consistent throughout the timeseries, but in which total abundance varied over time consistent with the observed dynamics. For each route, we characterized the "observed" timeseries of total biomass and total energy use by simulating size measurements for all individuals observed in each time step and summing across individuals, using the method described above. We then created simulated timeseries for biomass and energy use by re-assigning the species identities of individuals based on each species' mean relative abundance throughout the timeseries. For each time step, we calculated the relative abundance for each species. For each species, we then took the mean relative abundance over all time steps. We used the distribution of species' mean relative abundances as the weights for a multinomial distribution describing the probability than an individual drawn at random from the community is of a particular species. For every timestep, we assigned species identities to individuals by sampling the observed number of individuals from this timeseries-wide multinomial distribution. We then simulated body size measurements for individuals, and calculated total energy use and total biomass, following the same procedure as for the observed community. This estimates the dynamics for size-based currencies expected if the species (and size) composition of the community does not change over time, but incorporating observed fluctuations in total abundance. 
+
+### Linear trends
+
+For each route, we evaluated the 30-year trend in biomass (or energy use) and compared this to the trend derived from the null model using generalized linear models with a Gamma family and log link. We fit four models to characterize 1) the trend in biomass (or energy use) over time and 2) whether this trend deviates from the trend expected given only changes in abundance:
+
+1. `biomass ~ year * source`, in which "source" refers to being either the "observed" or "null model" value. This model fits a slope and intercept for the observed trend biomass over time, and a separate slope and intercept for the trend drawn from the null model.
+2. `biomass ~ year + source`. This model fits a separate intercept, but not slope, for the null model.
+3. `biomass ~ year`. This model fits a temporal trend, but does not fit separate trends for the observed and null data.
+4. `biomass ~ 1`. The intercept-only model describes no directional change over time for either the observed or null data.
+
+We selected the best-fitting model using AICc. In instances where multiple models had AICc scores within two AICc units of each other, we selected the simplest model within two units of the best score.
+
+For each route's best-fitting model, we extracted the predicted values for the first (usually 1988) and last (usually 2018) year sampled, for both the observed and null trajectories. We calculated the magnitude of change over time as the ratio of the last (2018) to the first (1988) value.
+
+### Distinguishing between stasis and nondirectional variability
+
+It is important to recognize that the absence of a linear temporal trend, or an absence of *different* linear trends for observed and null dynamics, do not directly imply the absence of variability over time or between observed and null dynamics. We explored the level of variability in both the temporal trends and in the correspondence between the observed and null dynamics, to distinguish between scenarios of very little change or decoupling, and scenarios of high variability that is not well-captured by a linear trend or interaction. First, we calculated the degree of variability (coefficient of variation) in biomass and total energy use for each route and compared the variability observed in routes best-characterized by different models. Second, we examined the correlation coefficient relating observed values to simulated values for biomass (or energy use) and compared the distribution of correlation coefficients among routes well-described by "decoupled" models and simpler models. 
+
+### Distinguishing observed vs. null dynamics
+
+<!-- I don't know where this paragraph - or this analysis, really - belong. -->
+
+As a test of whether observed dynamics were more dissimilar to null dynamics than can be accounted for by sampling error within the null model, we calculated the correlation coefficient for 100 draws from the null model compared to the focal draw used for the linear model analyses. We calculated the percentile score of the observed correlation coefficient relative to draws from the null model, and calculated the difference between the observed correlation coefficient and the mean correlation coefficient across all draws from the null model.
+
+
+\newpage
+# References
