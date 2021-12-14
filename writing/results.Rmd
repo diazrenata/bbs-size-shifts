@@ -1,0 +1,63 @@
+---
+output:
+  # word_document:
+  #   reference_docx: default_gdoc.docx
+  #   df_print: kable
+  # html_document:
+  #   df_print: kable
+  pdf_document: 
+    df_print: kable
+csl: ecology.csl
+bibliography: refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, include = F, results = F, message = F, warning = F, eval = T, fig.dim = c(3.5, 2))
+library(dplyr)
+library(drake)
+library(multipanelfigure)
+library(ggplot2)
+theme_set(theme_bw())
+
+## Set up the cache and config
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all_hasty_toy.sqlite"))
+cache <- storr::storr_dbi("datatable", "keystable", db)
+cache$del(key = "lock", namespace = "session")
+
+
+loadd(all_preds, cache=cache)
+loadd(all_aics, cache=cache)
+
+perfect_coverage_models <- filter(all_preds, model_begin == 1988, model_end == 2017)
+
+winning_aics <- all_aics %>%
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>%
+  mutate(deltaAICc = minAICc - model_AICc)  %>%
+  mutate(exp_deltas = exp(.5 * deltaAICc)) %>%
+  mutate(denom = sum(exp_deltas)) %>%
+  mutate(aicc_wt = exp_deltas/ denom) %>%
+  arrange(desc(aicc_wt)) %>%
+  mutate(rank =row_number()) %>%
+  ungroup() %>%
+  arrange(matssname, model_family, rank)
+
+delta_2 <- winning_aics %>% filter(deltaAICc > -2) %>%
+  group_by(matssname, model_family) %>%
+  arrange(modelcomplexity) %>%
+  mutate(rank = row_number()) %>%
+  filter(rank == 1) %>%
+  ungroup()
+
+delta_2 %>% group_by(model_family, model_formula) %>% tally()
+
+winning_fits <- delta_2 %>%
+  left_join(all_preds) %>%
+  filter(model_family == "Gamma")
+
+```
+
+# Results
+
+\newpage
+# References

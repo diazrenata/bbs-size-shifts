@@ -8,20 +8,16 @@ library(BBSsize)
 run_hpg = T
 #max_caps <- c(75, 150, 225, 300, 375, 450, 528)
 # for(i in 1:length(max_caps)) {
-source(here::here("hasty_fxns.R"))
+source(here::here("analyses", "hasty_fxns.R"))
 #i = 1
 datasets <- MATSS::build_bbs_datasets_plan()
 
 
-working_datasets <- read.csv(here::here("supporting_data","perfect_coverage_1988_2018.csv"))
+working_datasets <- read.csv(here::here("analyses", "supporting_data","ninetypercent_coverage_1988_2018.csv"))
 
 
 datasets <- datasets[ which(datasets$target %in% working_datasets$matssname), ]
-#datasets <- datasets[1:2, ]
-#
-# datasets <- datasets[ unique(c(1:max_caps[i], which(datasets$target %in% c("bbs_rtrg_224_3", "bbs_rtrg_318_3", "bbs_rtrg_19_7", "bbs_rtrg_116_18", "bbs_rtrg_3_80")))), ]
 
-#datasets <- datasets[ which(datasets$target %in% c("bbs_rtrg_224_3", "bbs_rtrg_318_3", "bbs_rtrg_19_7", "bbs_rtrg_116_18", "bbs_rtrg_3_80")), ]
 
 methods <- drake_plan(
   ssims = target(whole_thing(dataset),
@@ -52,7 +48,7 @@ all = bind_rows(datasets, methods)
 
 
 ## Set up the cache and config
-db <- DBI::dbConnect(RSQLite::SQLite(), here::here("drake_caches", "all_hasty_toy.sqlite"))
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all_hasty_toy.sqlite"))
 cache <- storr::storr_dbi("datatable", "keystable", db)
 cache$del(key = "lock", namespace = "session")
 
@@ -71,7 +67,7 @@ system.time(make(all,
                  cache = cache,
                  verbose = 1,
                  parallelism = "clustermq",
-                 jobs = 4,
+                 jobs = 16,
                  caching = "main",
                  memory_strategy = "autoclean",
                  lock_envir = F,
