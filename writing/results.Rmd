@@ -236,9 +236,22 @@ ggplot(interaction_all_fits_energy, aes(ratio_sim, ratio_real)) + geom_point(alp
  
 ```
 
-## CV of timeseries
+## ISD overlap
 
-## CorCoef of observed to null
+```{r}
+
+loadd(all_isd_compares, cache =cache)
+
+winning_fits <- winning_fits %>% left_join(all_isd_compares)
+
+ggplot(winning_fits, aes(real_overlap, color = model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
+
+AIC(glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits))
+AIC(glm(real_overlap ~ 1, family = "binomial", data = winning_fits))
+
+summary(lm(real_overlap ~ model_formula, data = winning_fits))
+
+```
 
 ##
 \newpage

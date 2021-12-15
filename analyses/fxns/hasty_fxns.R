@@ -170,6 +170,10 @@ model_predicted_change <- function(one_model) {
   model_dat <- one_model$data %>%
     mutate(predvals = predict(one_model, type = "response"))
 
+  model_cor <- cor(model_dat$predvals, one_model$model[,1])
+
+  cor_squared = model_cor ^ 2
+
   model_begin <- min(model_dat$timeperiod)
   model_end <- max(model_dat$timeperiod)
   model_span <- model_end - model_begin
@@ -180,7 +184,9 @@ model_predicted_change <- function(one_model) {
     select(timeperiod_name, predvals, source) %>%
     tidyr::pivot_wider(names_from = c(timeperiod_name, source), values_from = predvals) %>%
     mutate(ratio_sim = end_sim / begin_sim,
-           ratio_real = end_real / begin_real) %>%
+           ratio_real = end_real / begin_real,
+           model_cor = model_cor,
+           model_cor_squared = cor_squared) %>%
     mutate(model_family = one_model$family$family,
            model_link = one_model$family$link,
            model_formula = toString(one_model$formula[3]),
@@ -295,4 +301,19 @@ fiveyr_compare <- function(dat) {
     mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
 
   out
+}
+
+rsquared <- function(focal, compare) {
+
+  if(log) {
+
+    focal <- log(focal)
+    compare <- log(compare)
+  }
+
+  focal_mean <- mean(focal)
+
+  numer <- sum((focal - compare) ^ 2)
+  denom <- sum((focal - focal_mean) ^ 2)
+  1 - (numer/denom)
 }
