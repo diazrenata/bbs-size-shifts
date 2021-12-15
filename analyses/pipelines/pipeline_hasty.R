@@ -35,13 +35,13 @@ methods <- drake_plan(
   all_aics = target(dplyr::bind_rows(aics),
                     transform = combine(aics)),
   all_preds = target(dplyr::bind_rows(preds),
-                     transform = combine(preds)),
-  cor_comps = target(cor_compare(dataset, ndraws = 100),
-                     transform = map(
-                       dataset = !!rlang::syms(datasets$target)
-                     )),
-  all_cor_comps = target(dplyr::bind_rows(cor_comps),
-                         transform = combine(cor_comps))
+                     transform = combine(preds))#,
+  # cor_comps = target(cor_compare(dataset, ndraws = 100),
+  #                    transform = map(
+  #                      dataset = !!rlang::syms(datasets$target)
+  #                    )),
+  # all_cor_comps = target(dplyr::bind_rows(cor_comps),
+  #                        transform = combine(cor_comps))
 )
 
 all = bind_rows(datasets, methods)
