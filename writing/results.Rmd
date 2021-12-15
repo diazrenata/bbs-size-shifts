@@ -12,7 +12,7 @@ bibliography: refs.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, include = F, results = F, message = F, warning = F, eval = T, fig.dim = c(3.5, 2))
+knitr::opts_chunk$set(echo = F, include = T, results = T, message = F, warning = F, eval = T, fig.dim = c(3.5, 2))
 library(dplyr)
 library(drake)
 library(multipanelfigure)
