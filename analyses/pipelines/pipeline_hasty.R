@@ -37,15 +37,21 @@ methods <- drake_plan(
   all_preds = target(dplyr::bind_rows(preds),
                      transform = combine(preds)),
   glms_energy = target(hasty_energy_models(ssims),
-                transform = map(ssims)),
+                       transform = map(ssims)),
   aics_energy = target(hasty_model_aic(glms_energy),
-                transform = map(glms_energy)),
+                       transform = map(glms_energy)),
   preds_energy = target(hasty_model_predicted_change(glms_energy),
-                 transform = map(glms_energy)),
+                        transform = map(glms_energy)),
   all_aics_energy = target(dplyr::bind_rows(aics_energy),
-                    transform = combine(aics_energy)),
+                           transform = combine(aics_energy)),
   all_preds_energy = target(dplyr::bind_rows(preds_energy),
-                     transform = combine(preds_energy))
+                            transform = combine(preds_energy)),
+  isd_compares = target(fiveyr_compare(dataset),
+                        transform = map(
+                          dataset = !!rlang::syms(datasets$target)
+                        )),
+  all_isd_compares = target(dplyr::bind_rows(isd_compares),
+                            transform = combine(isd_compares))
   # cor_comps = target(cor_compare(dataset, ndraws = 100),
   #                    transform = map(
   #                      dataset = !!rlang::syms(datasets$target)

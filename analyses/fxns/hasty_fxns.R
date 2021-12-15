@@ -238,3 +238,61 @@ sim_cor <- function(compare_sv, focal_sv) {
   cor(focal_sv$total_biomass, compare_sv$total_biomass)
 
 }
+
+fiveyr_compare <- function(dat) {
+  dat_sliced <-slice_dat(dat)
+
+  dat_resp <- resp_dat(dat_sliced, resp_seed = 1989)
+
+  dat_isd <- simulate_isd_ts(dat_sliced, isd_seed = 1989)
+
+  dat_resp_isd <- simulate_isd_ts(dat_resp, isd_seed = 1989)
+
+  years <- unique(dat_sliced$covariates$year)
+
+  begin_years <- years[1:5]
+  end_years <- years[(length(years) - 4):length(years)]
+
+  begin_isd_real <- filter(dat_isd$isd, year %in% begin_years)
+  end_isd_real <- filter(dat_isd$isd, year %in% end_years )
+
+  begin_isd_gmm_real <- add_gmm(begin_isd_real)
+  end_isd_gmm_real <- add_gmm(end_isd_real) %>%
+    rename(density_end = density)
+
+  real_gmms <- left_join(begin_isd_gmm_real, end_isd_gmm_real)
+
+  real_overlap <- real_gmms %>%
+    group_by_all() %>%
+    mutate(minDensity = min(density, density_end)) %>%
+    ungroup() %>%
+    summarize(overlap = sum(minDensity))
+
+
+  begin_isd_sim <- filter(dat_resp_isd$isd, year %in% begin_years)
+  end_isd_sim <- filter(dat_resp_isd$isd, year %in% end_years)
+
+  begin_isd_gmm_sim <- add_gmm(begin_isd_sim)
+  end_isd_gmm_sim <- add_gmm(end_isd_sim) %>%
+    rename(density_end = density)
+
+  sim_gmms <- left_join(begin_isd_gmm_sim, end_isd_gmm_sim)
+
+  sim_overlap <- sim_gmms %>%
+    group_by_all() %>%
+    mutate(minDensity = min(density, density_end)) %>%
+    ungroup() %>%
+    summarize(overlap = sum(minDensity))
+
+
+  out <- data.frame(
+    real_overlap = real_overlap$overlap[1],
+    sim_overlap = sim_overlap$overlap[1],
+    begin_years = toString(begin_years),
+    end_years = toString(end_years)
+  ) %>%
+    bind_cols(dat$metadata$location) %>%
+    mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
+
+  out
+}
