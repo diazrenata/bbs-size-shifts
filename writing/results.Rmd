@@ -129,7 +129,7 @@ interaction_all_fits <- all_preds %>% group_by_all() %>% filter( grepl( "* sourc
 ggplot(interaction_all_fits, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(interaction_all_fits, winning_formula != "1"), aes(color = winning_formula), alpha = .5) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1)
  
 ```
-
+\newpage
 # Energy use 
 ```{r}
 loadd(all_preds_energy, cache=cache)
@@ -246,12 +246,30 @@ winning_fits <- winning_fits %>% left_join(all_isd_compares)
 
 ggplot(winning_fits, aes(real_overlap, color = model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
 
-AIC(glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits))
-AIC(glm(real_overlap ~ 1, family = "binomial", data = winning_fits))
+isd_glm <- glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits)
+# 
+# AIC(isd_glm)
+# AIC(glm(real_overlap ~ 1, family = "binomial", data = winning_fits))
 
-summary(lm(real_overlap ~ model_formula, data = winning_fits))
+glm_cor <- cor(predict(isd_glm, type = "response"), isd_glm$model[,1]) ^ 2
+```
+
+R2 of binomial GLM `overlap ~ model_formula` (which does not beat a `overlap ~ 1` via AIC, FYI)
+
+```{r}
+glm_cor
+```
+
+# Goodness of fit of models
+
+```{r}
+
+ggplot(winning_fits, aes(model_cor_squared)) + geom_histogram() + facet_wrap(vars(model_formula), scales = "free_y")
+
+ggplot(winning_fits_energy, aes(model_cor_squared)) + geom_histogram() + facet_wrap(vars(model_formula), scales = "free_y")
 
 ```
+
 
 ##
 \newpage

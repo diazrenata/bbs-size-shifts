@@ -52,12 +52,6 @@ methods <- drake_plan(
                         )),
   all_isd_compares = target(dplyr::bind_rows(isd_compares),
                             transform = combine(isd_compares))
-  # cor_comps = target(cor_compare(dataset, ndraws = 100),
-  #                    transform = map(
-  #                      dataset = !!rlang::syms(datasets$target)
-  #                    )),
-  # all_cor_comps = target(dplyr::bind_rows(cor_comps),
-  #                        transform = combine(cor_comps))
 )
 
 all = bind_rows(datasets, methods)
