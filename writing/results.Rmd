@@ -60,16 +60,43 @@ winning_fits <- delta_2 %>%
 
 ```{r, results =T}
 
-delta_2 %>% group_by(model_family, model_formula) %>% tally()
+winning_fits %>% group_by(model_family, model_formula) %>% tally()
+
+slope_winning_fits <- winning_fits %>%
+  filter(modelcomplexity > 1)
+
+interaction_winning_fits <- winning_fits %>%
+  filter(modelcomplexity > 2)
+
+slope_winning_fits %>%
+  mutate(abundance_increasing = ratio_sim > 1) %>%
+  group_by(abundance_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+
+
+interaction_winning_fits %>%
+  mutate(abundance_increasing = ratio_sim > 1) %>%
+  group_by(abundance_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+
+
+interaction_winning_fits %>%
+  mutate(biomass_increasing = ratio_real > 1) %>%
+  group_by(biomass_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
 
 ```
 
 ## Direction and magnitude of slopes
 
 ```{r}
-ggplot(filter(winning_fits, modelcomplexity > 1), aes(ratio_sim)) + geom_histogram() + scale_x_log10()
+ggplot(slope_winning_fits, aes(ratio_sim)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Abundance-driven (null model) slope")
 
-ggplot(filter(winning_fits, modelcomplexity > 1), aes(ratio_real)) + geom_histogram() + scale_x_log10()
+
+ggplot(slope_winning_fits, aes(ratio_real)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Observed slope")
 
 ```
 
@@ -77,8 +104,11 @@ ggplot(filter(winning_fits, modelcomplexity > 1), aes(ratio_real)) + geom_histog
 
 ```{r}
 
-ggplot()
+interaction_all_fits <- all_preds %>% group_by_all() %>% filter( grepl( "* source",model_formula), model_family == "Gamma") %>% mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>% ungroup() %>%
+  left_join(select(winning_fits, matssname, model_formula) %>% rename(winning_formula = model_formula))
 
+ggplot(interaction_all_fits, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(interaction_all_fits, winning_formula != "1"), aes(color = winning_formula), alpha = .5) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1)
+ 
 ```
 
 ## CV of timeseries

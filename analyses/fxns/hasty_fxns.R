@@ -96,6 +96,29 @@ hasty_models <- function(sims) {
 }
 
 
+hasty_energy_models <- function(sims) {
+
+
+  models <- list(
+
+    gaussian_glm_full = glm(total_energy ~ timeperiod * source, data= sims),
+    gaussian_glm_noint = glm(total_energy ~ timeperiod + source, data= sims),
+    gaussian_glm_nos = glm(total_energy ~ timeperiod, data= sims),
+    gaussian_glm_notime = glm(total_energy ~ 1, data = sims),
+
+
+    gamma_glm_full = glm(total_energy ~ timeperiod * source, family = Gamma(link = "log"), data= sims),
+    gamma_glm_noint = glm(total_energy ~ timeperiod + source, family = Gamma(link = "log"), data= sims),
+    gamma_glm_nos = glm(total_energy ~ timeperiod, family = Gamma(link = "log"), data= sims),
+    gamma_glm_notime = glm(total_energy ~ 1, family = Gamma(link = "log"), data = sims)
+
+  )
+
+  models
+
+}
+
+
 hasty_model_aic <- function(some_models) {
 
   p_interaction <- anova(some_models$gaussian_glm_full, some_models$gaussian_glm_noint, test = "F")[2,6]
