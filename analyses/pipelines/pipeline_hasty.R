@@ -36,7 +36,7 @@ methods <- drake_plan(
                     transform = combine(aics)),
   all_preds = target(dplyr::bind_rows(preds),
                      transform = combine(preds)),
-  glms_energy = target(hasty_models(ssims),
+  glms_energy = target(hasty_energy_models(ssims),
                 transform = map(ssims)),
   aics_energy = target(hasty_model_aic(glms_energy),
                 transform = map(glms_energy)),
