@@ -54,7 +54,7 @@ winning_fits <- delta_2 %>%
   left_join(all_preds) 
 ```
 
-# Results
+# Biomasss
 
 ## Model outcomes
 
@@ -127,6 +127,112 @@ interaction_all_fits <- all_preds %>% group_by_all() %>% filter( grepl( "* sourc
   left_join(select(winning_fits, matssname, model_formula) %>% rename(winning_formula = model_formula))
 
 ggplot(interaction_all_fits, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(interaction_all_fits, winning_formula != "1"), aes(color = winning_formula), alpha = .5) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1)
+ 
+```
+
+# Energy use 
+```{r}
+loadd(all_preds_energy, cache=cache)
+loadd(all_aics_energy, cache=cache)
+
+winning_aics_energy <- all_aics_energy %>%
+  filter(model_family == "Gamma") %>%
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>%
+  mutate(deltaAICc = minAICc - model_AICc)  %>%
+  mutate(exp_deltas = exp(.5 * deltaAICc)) %>%
+  mutate(denom = sum(exp_deltas)) %>%
+  mutate(aicc_wt = exp_deltas/ denom) %>%
+  arrange(desc(aicc_wt)) %>%
+  mutate(rank =row_number()) %>%
+  ungroup() %>%
+  arrange(matssname, model_family, rank)
+
+delta_2_energy <- winning_aics_energy %>% filter(deltaAICc > -2) %>%
+  filter(model_family == "Gamma") %>%
+  group_by(matssname, model_family) %>%
+  arrange(modelcomplexity) %>%
+  mutate(rank = row_number()) %>%
+  filter(rank == 1) %>%
+  ungroup()
+
+
+winning_fits_energy <- delta_2_energy %>%
+  left_join(all_preds_energy) 
+```
+
+
+## Model outcomes
+
+Overall proportion of routes with winning models:
+
+```{r, results =T}
+
+winning_fits_energy %>% group_by(model_family, model_formula) %>% tally() %>%
+  mutate(prop = n / sum(n))
+
+```
+
+Of models with slope term, the proportion for which abundance and biomass are increasing:
+
+```{r}
+slope_winning_fits_energy <- winning_fits_energy %>%
+  filter(modelcomplexity > 1)
+
+interaction_winning_fits_energy <- winning_fits_energy %>%
+  filter(modelcomplexity > 2)
+
+slope_winning_fits_energy %>%
+  mutate(abundance_increasing = ratio_sim > 1) %>%
+  group_by(abundance_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+
+
+slope_winning_fits_energy %>%
+  mutate(energy_increasing = ratio_real > 1) %>%
+  group_by(energy_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+```
+
+
+Restricted to models with an *interaction*:
+
+```{r}
+interaction_winning_fits_energy %>%
+  mutate(abundance_increasing = ratio_sim > 1) %>%
+  group_by(abundance_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+
+
+interaction_winning_fits_energy %>%
+  mutate(energy_increasing = ratio_real > 1) %>%
+  group_by(energy_increasing) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+
+```
+
+## Direction and magnitude of slopes
+
+```{r}
+ggplot(slope_winning_fits_energy, aes(ratio_sim)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Abundance-driven (null model) slope")
+
+
+ggplot(slope_winning_fits_energy, aes(ratio_real)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Observed slope")
+
+```
+
+## Direction of decoupling
+
+```{r, fig.dim= c(4,4)}
+
+interaction_all_fits_energy <- all_preds_energy %>% group_by_all() %>% filter( grepl( "* source",model_formula), model_family == "Gamma") %>% mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>% ungroup() %>%
+  left_join(select(winning_fits_energy, matssname, model_formula) %>% rename(winning_formula = model_formula))
+
+ggplot(interaction_all_fits_energy, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(interaction_all_fits_energy, winning_formula != "1"), aes(color = winning_formula), alpha = .5) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1)
  
 ```
 
