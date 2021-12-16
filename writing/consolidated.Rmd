@@ -75,20 +75,29 @@ Decoupling between the long-term trajectories of abundance and energy use or bio
 
 # Discussion
 
-## Biological interpretation of results
+## Decoupling of abundance, biomass, and energy use
 
-While changes in size-based currencies usually scale with abundance, in a substantial minority of instances they do not. Meaning, there has been directional shift in the size structure that changes the outcome for function vs abundance. 
+Although the dynamics of size- and abundance- based currencies are intrinsically related to each other, decoupling in these dynamics for a substantial minority of communities results in qualitatively different continent-wide patterns in the long-term trends of abundance, biomass, and energy use. Despite a strong signal of declines in overall abundance across the routes in the BBS, the long-term trends in biomass are evenly divided between increases and decreases. 
 
-This means we should extrapolate from "abundance" to "function" with some care. 
+First, this illustrates that we should extrapolate between currencies with some care. They are intrinsically linked, but changes in size structure can cause scaling relationships between each of the currencies to break down. Shifts in mean per capita body size decouple biomass from abundance, and different specific size compositions will result in different community-wide scaling between energy use and biomass. 
 
-When these strong size shifts occur, it is also a prompt to dig deeper into what's going on in that system. 
+For routes with a decoupling in the long-term trends of biomass, energy use, and abundance, this decoupling is indicative of a directional shift in the size structure of the community. In the case of BBS, the overwhelmingly most common scenario is of a decline in abundance, but a shift in the size structure favoring larger-bodied species and offsetting or even reversing this decline in abundance. This contrasts with general concerns about larger-bodied species being more vulnerable to declines in abundance or outright extinctions due to anthropogenic changes. However, it is consistent with previous findings from the BBS. Increases in body size may reflect forests in recovery across North America, or the contributions of relatively few, large-bodied species that may in fact benefit from recent ecological changes. 
 
-When they diverge, it is usually in the direction of less-negative-change. Because abundance is usually decreasing, this is generally partially offsetting the decline in energy use/biomass that would be expected just given abundance. This contrasts with general concerns about size-biased declines disproportionately affecting large species. However, the increase in body size is consistent with other observations specific to BBS, possibly reflecting forests in recovery across North America. 
+## How changes in the ISD contribute to decoupling
 
-## Limitations and paths forward
+While an overall decoupling of the long-term trends for biomass, abundance, and energy use is symptomatic of a pronounced shift in the size structure, the absence of such a decoupling does not imply that the size structure has remained unchanged over time. Rather, the amount of turnover in the size structure over time is comparable for routes that do and do not exhibit long-term decoupling. Importantly, these size shifts may *also* reflect significant functional changes to the community, and should not be ignored simply because they have no overall or consistent effect on the long-term temporal trends.
 
-## Conclusions
+We should also not discount the possibility that either random population dynamics, or systematic, but non-*size*-structured, dynamics, contribute to changes in both the size structure and in the relationship between biomass, energy use, and abundance over time. At a macroecological scale, null modeling approaches inspired by the study of functional and taxonomic beta diversity may be useful in this space. However, these models are known to suffer from the "Narcissus effect" and to be highly sensitive to the information used to constrain the model, resulting in a high type-I error rate and reduced inferential power. It may, therefore, be most informative to focus instead on the dynamics of particular systems and attempt to understand the interlinked dynamics of shifts in species composition, size structure, abundance, biomass, and energy use from a perspective grounded in empiricism and natural history. 
 
+## Extensions to capture nonlinear dynamics
+
+While linear approximations can help identify strong directional trends, they have significant limitations for understanding more complex biodiversity dynamics. Long-term trends may mask changes in direction of a trend over time, and it is challenging to distinguish between low-variability, and highly variable, but not *temporally* structured, timeseries in macroecological-scale datasets. This is doubly true in the context of comparing multiple abundance currencies to each other: complex dynamics of the size structure, and therefore the scaling between size- and abundance- based currencies, may be inadequately described by linear approximations. 
+
+Again, a more system-specific perspective, combined with emerging statistical approaches, may  help move us towards a more nuanced understanding of the potential for nonlinear temporal dynamics. For example, generalized additive models (GAMS) present an emerging and promising tool set for exploring these more complex biodiversity dynamics. Generalized additive models can describe complex, nonlinear dynamics, and can be used to detect periods of time when the trajectories of multiple currencies decouple from each other. However, fitting GAMs for this application requires numerous decisions that depend on the specificities of a given dataset, and we lack conceptual frameworks for interpreting macroecological-scale aggregations of complex temporal dynamics. Efforts along these lines working with specific systems can help develop robust model fitting protocols and frameworks for interpretation that can eventually be applied to large-scale datasets such as the one presented here.
+
+## Conclusion
+
+This analysis demonstrates the usefulness and the limitations of a macroecological approach to studying community structure and function across levels of organization. In the first large-scale synthesis of the temporal dynamics of community size structure and function for terrestrial animals, we find that changes in species/size composition can and do drive qualitatively different long-term trajectories for size- and abundance- based currencies of function. This is indicative of widespread changes in community size structure that may reflect substantive changes in functional composition. Future, potentially smaller-scale, work will be instrumental in identifying the processes driving these shifts and characterizing more nuanced relationships between size and abundance over time in these systems. 
 \newpage
 
 ```{r setup, include=FALSE}
