@@ -290,12 +290,23 @@ fiveyr_compare <- function(dat) {
     ungroup() %>%
     summarize(overlap = sum(minDensity))
 
+  real_begin_mean_mass <- mean(begin_isd_real$mass)
+  real_end_mean_mass <- mean(end_isd_real$mass)
+  sim_begin_mean_mass <- mean(begin_isd_sim$mass)
+  sim_end_mean_mass <- mean(end_isd_sim$mass)
+
 
   out <- data.frame(
     real_overlap = real_overlap$overlap[1],
     sim_overlap = sim_overlap$overlap[1],
     begin_years = toString(begin_years),
-    end_years = toString(end_years)
+    end_years = toString(end_years),
+    real_begin_mean_mass = real_begin_mean_mass,
+    real_end_mean_mass = real_end_mean_mass,
+    sim_begin_mean_mass = sim_begin_mean_mass,
+    sim_end_mean_mass = sim_end_mean_mass,
+    real_mass_ratio = real_end_mean_mass / real_begin_mean_mass,
+    sim_mass_ratio = sim_end_mean_mass / sim_begin_mean_mass
   ) %>%
     bind_cols(dat$metadata$location) %>%
     mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
