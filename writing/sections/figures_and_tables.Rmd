@@ -54,7 +54,71 @@ winning_fits <- delta_2 %>%
   left_join(all_preds) 
 ```
 
-# Biomasss
+# Abundance-driven vs. actual change
+
+```{r, fig.dim = c(6,2)}
+
+loadd(all_sims, cache=cache)
+rn <- "bbs_rtrg_28_4"
+dat <- readd(rn, character_only = T, cache=cache)
+source(here::here("analyses", "fxns", "hasty_fxns.R"))
+
+dat_sliced <- slice_dat(dat)
+dat_resp <- resp_dat(dat_sliced)
+
+dat_isd <- simulate_isd_ts(dat_sliced, isd_seed = 1989)
+dat_resp_isd <- simulate_isd_ts(dat_resp, isd_seed = 1989)
+
+years <- unique(dat_sliced$covariates$year)
+
+begin_years <- years[1:5]
+end_years <- years[(length(years) - 4):length(years)]
+
+begin_isd_real <- filter(dat_isd$isd, year %in% begin_years)
+end_isd_real <- filter(dat_isd$isd, year %in% end_years )
+
+begin_isd_sim <- filter(dat_resp_isd$isd, year %in% begin_years)
+end_isd_sim <- filter(dat_resp_isd$isd, year %in% end_years)
+
+begin_isd_gmm_real <- add_gmm(begin_isd_real) %>%
+  mutate(time = "begin")
+end_isd_gmm_real <- add_gmm(end_isd_real) %>%
+  mutate(time = "end")
+
+real_gmms <- bind_rows(begin_isd_gmm_real, end_isd_gmm_real)
+
+begin_isd_gmm_sim <- add_gmm(begin_isd_sim) %>%
+  mutate(time = "begin")
+end_isd_gmm_sim <- add_gmm(end_isd_sim)  %>%
+  mutate(time = "end")
+sim_gmms <- bind_rows(begin_isd_gmm_sim, end_isd_gmm_sim) 
+
+
+real_isd_plots <- ggplot(real_gmms, aes(mass, density, color = time)) + geom_line() + ggtitle("Observed ISD change")
+
+sim_isd_plots <- ggplot(sim_gmms, aes(mass, density, color = time)) + geom_line() + ggtitle("Null model (long term mean)")
+
+
+isd_panels <- multi_panel_figure(columns = 2, rows = 1) %>%
+  fill_panel(real_isd_plots) %>%
+  fill_panel(sim_isd_plots)
+isd_panels
+
+
+dat_dynamics <- filter(all_sims, matssname == rn)
+
+dat_glm <- glm(total_biomass ~ timeperiod * source, data = dat_dynamics, family = Gamma)
+
+dat_dynamics <- dat_dynamics %>%
+  mutate(fitted = predict(dat_glm, type = "response"))
+
+timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = source)) + geom_point() + geom_line() + geom_line(aes(y = fitted)) + geom_rect(aes(xmin = years[1], xmax = years[5], ymin = min(total_biomass), ymax = max(total_biomass)), alpha = 0, linetype = 3, color = "black")+ geom_rect(aes(xmin = years[length(years) - 4], xmax = years[length(years)], ymin = min(total_biomass), ymax = max(total_biomass)), alpha = 0, linetype = 3, color = "black")
+
+timeseries_plot
+```
+
+
+# Biomass
 
 ## Model outcomes
 
@@ -127,7 +191,7 @@ interaction_all_fits <- all_preds %>% group_by_all() %>% filter( grepl( "* sourc
   left_join(select(winning_fits, matssname, model_formula) %>% rename(winning_formula = model_formula))
 
 ggplot(interaction_all_fits, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(interaction_all_fits, winning_formula != "1"), aes(color = winning_formula), alpha = .5) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1)
- 
+
 ```
 \newpage
 # Energy use 
@@ -233,7 +297,7 @@ interaction_all_fits_energy <- all_preds_energy %>% group_by_all() %>% filter( g
   left_join(select(winning_fits_energy, matssname, model_formula) %>% rename(winning_formula = model_formula))
 
 ggplot(interaction_all_fits_energy, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(interaction_all_fits_energy, winning_formula != "1"), aes(color = winning_formula), alpha = .5) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1)
- 
+
 ```
 
 ## ISD overlap
