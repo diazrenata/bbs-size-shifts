@@ -12,7 +12,7 @@ bibliography: refs.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, include = T, results = T, message = F, warning = F, eval = T, fig.dim = c(3.5, 2))
+knitr::opts_chunk$set(echo = F, include = T, results = T, message = F, warning = F, eval = T, fig.dim = c(4,4))
 library(dplyr)
 library(drake)
 library(multipanelfigure)
@@ -178,7 +178,9 @@ interaction_winning_fits %>%
 ```{r}
 ggplot(slope_winning_fits, aes(ratio_sim)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Abundance-driven (null model) slope")
 
+```
 
+```{r}
 ggplot(slope_winning_fits, aes(ratio_real)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Observed slope")
 
 ```
@@ -283,7 +285,9 @@ interaction_winning_fits_energy %>%
 
 ```{r}
 ggplot(slope_winning_fits_energy, aes(ratio_sim)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Abundance-driven (null model) slope")
+```
 
+```{r}
 
 ggplot(slope_winning_fits_energy, aes(ratio_real)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Observed slope")
 
@@ -300,7 +304,7 @@ ggplot(interaction_all_fits_energy, aes(ratio_sim, ratio_real)) + geom_point(alp
 
 ```
 
-## ISD overlap
+## Change in mean body size
 
 ```{r}
 
@@ -308,7 +312,18 @@ loadd(all_isd_compares, cache =cache)
 
 winning_fits <- winning_fits %>% left_join(all_isd_compares)
 
-ggplot(winning_fits, aes(real_overlap, color = model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
+
+ggplot(winning_fits, aes(real_mass_ratio, color = model_formula, fill= model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
+
+
+```
+
+## ISD overlap
+
+```{r}
+
+
+ggplot(winning_fits, aes(real_overlap, color = model_formula, fill = model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
 
 isd_glm <- glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits)
 # 
