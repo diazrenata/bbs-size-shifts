@@ -76,7 +76,7 @@ isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(
   geom_line() + 
   facet_wrap(vars(simtype), ncol = 2, scales = "free_y") + 
   theme(legend.position = "bottom") + 
-  scale_color_viridis_d(option = "plasma",begin = .2,  end = .8) + 
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
   ylab("Probability density")+ 
   xlab("Mass (g); note log scale") +
   scale_x_log10()
@@ -106,7 +106,7 @@ timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = s
   geom_line(aes(y = fitted)) + 
   # geom_rect(aes(xmin = years[1], xmax = years[5], ymin = min(total_biomass), ymax = max(total_biomass), time = "begin"), alpha = 0, color = "black")+ 
   # geom_rect(data=  mutate(dat_dynamics, time = "end"), aes(xmin = years[length(years) - 4], xmax = years[length(years)], ymin = min(total_biomass), ymax = max(total_biomass),linetype = time), alpha = 0, color = "black")+
-  scale_color_viridis_d(option = "plasma",begin = .2,  end = .8) + 
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
   theme(legend.position = "none") +
   xlab("Year") +
   ylab("Total biomass")
@@ -223,12 +223,12 @@ energy_slopes_long <- slope_winning_fits_energy %>%
 
 ```{r, fig.dim = c(5, 5)}
 
-biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "plasma", begin = .2, end = .8) + scale_fill_viridis_d(option = "plasma", begin = .2, end = .8) +
+biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
   theme(legend.position = "none") + ggtitle("Total biomass") + xlab("")
 
 
-energy_slope_histogram <- ggplot(energy_slopes_long, aes(energy_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "plasma", begin = .2, end = .8) + scale_fill_viridis_d(option = "plasma", begin = .2, end = .8) +
-  theme(legend.position = "bottom") + ggtitle("Total metabolic flux") + xlab("Ratio of last year to first year")
+energy_slope_histogram <- ggplot(energy_slopes_long, aes(energy_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
+  theme(legend.position = "bottom") + ggtitle("Total metabolic flux") + xlab("Ratio of last fitted value to first fitted value")
 
 slope_histograms <- multi_panel_figure(columns = 1, height = c(2.25, 2.75), unit = "in") %>%
   fill_panel(biomass_slope_histogram) %>%
@@ -338,33 +338,55 @@ slope_winning_fits_energy %>%
 
 # Visualizing decoupling
 
-NOT AT ALL CLEAR why I am plotting multiple layers rather than plotting the "winning model" as just the color term. Was I not wanting the "~1"s to overlay on the others? There are fewer of them. 
-
-
 ```{r}
 
-interaction_all_fits <- all_preds %>% group_by_all() %>% filter( grepl( "* source",model_formula), model_family == "Gamma") %>% mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>% ungroup() %>%
-  left_join(select(winning_fits, matssname, model_formula) %>% rename(winning_formula = model_formula)) %>%
-  select(winning_formula, ratio_sim, ratio_real, matssname) %>%
+interaction_all_fits <- all_preds %>% 
+  # get just the change ratios from the interaction models - regardless of whether the interaction model is the best-fitting model. this is because we want an estimate of the slope, we'll color by model fit in a minute
+  group_by_all() %>% 
+  filter(grepl( "* source",model_formula), model_family == "Gamma") %>%
+  mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>%
+  ungroup() %>%
+  # now join to *winning* formulas to get the best fitting formula
+  left_join(select(winning_fits, matssname, model_formula, modelcomplexity) %>%
+              rename(winning_formula = model_formula)) %>%
+  select(winning_formula, ratio_sim, ratio_real, matssname, modelcomplexity) %>%
   mutate(currency = "Biomass")
 
 
-interaction_all_fits_energy <- all_preds_energy %>% group_by_all() %>% filter( grepl( "* source",model_formula), model_family == "Gamma") %>% mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>% ungroup() %>%
-  left_join(select(winning_fits_energy, matssname, model_formula) %>% rename(winning_formula = model_formula)) %>%
-  select(winning_formula, ratio_sim, ratio_real, matssname) %>%
+interaction_all_fits_energy <- all_preds_energy  %>% 
+  # get just the change ratios from the interaction models - regardless of whether the interaction model is the best-fitting model. this is because we want an estimate of the slope, we'll color by model fit in a minute
+  group_by_all() %>% 
+  filter(grepl( "* source",model_formula), model_family == "Gamma") %>%
+  mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>%
+  ungroup() %>%
+  # now join to *winning* formulas to get the best fitting formula
+  left_join(select(winning_fits_energy, matssname, model_formula, modelcomplexity) %>%
+              rename(winning_formula = model_formula)) %>%
+  select(winning_formula, ratio_sim, ratio_real, matssname, modelcomplexity) %>%
   mutate(currency = "Metabolic flux")
 
-all_interaction <- bind_rows(interaction_all_fits, interaction_all_fits_energy)
+
+all_interaction <- bind_rows(interaction_all_fits, interaction_all_fits_energy) %>%
+  mutate(`Best fitting model` = ifelse(modelcomplexity == 1, "No trend", ifelse(modelcomplexity == 2, "Coupled trend", "Decoupled trends")))
 
 
 ```
 
 
-```{r, fig.dim= c(6,4)}
+```{r, fig.dim= c(5.5,3)}
 
-decoupling_plot <- ggplot(all_interaction, aes(ratio_sim, ratio_real)) + geom_point(alpha = .2) + geom_point(data = filter(all_interaction, winning_formula != "1"), aes(color = winning_formula), alpha = .3) + scale_y_log10() + scale_x_log10() + scale_color_viridis_d(end = .8) + theme(legend.position = "bottom") + geom_abline(intercept = 0, slope = 1) + geom_vline(xintercept = 1) + geom_hline(yintercept = 1) +
-  xlab("Abundance-driven change \n Ratio of last value to first value") + 
-  ylab("Observed change \n Ratio of last value to first value") +
+decoupling_plot <- ggplot(all_interaction, aes(ratio_sim, ratio_real, color = `Best fitting model`)) + 
+  geom_point(alpha = .5) + 
+  #geom_point(data = filter(all_interaction, winning_formula != "1"), aes(color = winning_formula), alpha = .3) + 
+  scale_y_log10() + 
+  scale_x_log10() + 
+  scale_color_viridis_d(option = "mako", end = .8, direction = -1) + 
+  theme(legend.position = "bottom") + 
+  geom_abline(intercept = 0, slope = 1) + 
+  geom_vline(xintercept = 1) + 
+  geom_hline(yintercept = 1) +
+  xlab("Abundance-driven change \n Ratio of last fitted value to first fitted value") + 
+  ylab("Observed change \n Ratio of last fitted value to first fitted value") +
   facet_wrap(vars(currency), ncol = 2)
 
 
@@ -372,40 +394,65 @@ decoupling_plot
 ```
 
 
-
-## Change in mean body size
+# How the ISD contributes to decoupling
 
 ```{r}
 
 loadd(all_isd_compares, cache =cache)
 
-winning_fits <- winning_fits %>% left_join(all_isd_compares)
+winning_fits <- winning_fits %>% 
+  left_join(all_isd_compares) %>%
+  mutate(`Best fitting model` = ifelse(modelcomplexity == 1, "No trend", ifelse(modelcomplexity == 2, "Coupled trend", "Decoupled trends")))
 
 
-ggplot(winning_fits, aes(real_mass_ratio, color = model_formula, fill= model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
+isd_mean_change_plot <-  ggplot(winning_fits, aes(real_mass_ratio, color = `Best fitting model`, fill= `Best fitting model`)) + 
+  geom_histogram() + 
+  facet_wrap(vars(`Best fitting model`), scales = 'free_y', ncol = 1) +
+  scale_color_viridis_d(option = "mako", end = .8, direction = -1) +     
+  scale_fill_viridis_d(option = "mako", end = .8, direction = -1) +
+  theme(legend.position = "none") +
+  xlab("Ratio of mean mass\n(last five years / first five years)") +
+  ylab("Count") +
+  ggtitle("Change in mean body size")
+
+#isd_mean_change_plot
 
 
 ```
 
-## ISD overlap
-
 ```{r}
 
 
-ggplot(winning_fits, aes(real_overlap, color = model_formula, fill = model_formula)) + geom_histogram() + facet_wrap(vars(model_formula), scales = 'free_y', ncol = 1)
+isd_overlap_plot <- ggplot(winning_fits, aes(real_overlap,color = `Best fitting model`, fill= `Best fitting model`)) + 
+  geom_histogram() + 
+  facet_wrap(vars(`Best fitting model`), scales = 'free_y', ncol = 1) +
+  scale_color_viridis_d(option = "mako", end = .8, direction = -1) +  scale_fill_viridis_d(option = "mako", end = .8, direction = -1) +
+  theme(legend.position = "none") +
+  xlab("ISD overlap\n(last five years vs. first five years)") +
+  ylab("Count") +
+  ggtitle("Overall change in ISD")
+ # isd_overlap_plot
+# 
+# isd_glm <- glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits)
+# #
+# # AIC(isd_glm)
+# # AIC(glm(real_overlap ~ 1, family = "binomial", data = winning_fits))
+# 
+# glm_cor <- cor(predict(isd_glm, type = "response"), isd_glm$model[,1]) ^ 2
+```
 
-isd_glm <- glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits)
-#
-# AIC(isd_glm)
-# AIC(glm(real_overlap ~ 1, family = "binomial", data = winning_fits))
+```{r, fig.dim = c(5.5, 4)}
 
-glm_cor <- cor(predict(isd_glm, type = "response"), isd_glm$model[,1]) ^ 2
+isd_change_plots <- multi_panel_figure(columns = 2, rows = 1) %>%
+  fill_panel(isd_mean_change_plot) %>%
+  fill_panel(isd_overlap_plot)
+isd_change_plots
 ```
 
 R2 of binomial GLM `overlap ~ model_formula` (which does not beat a `overlap ~ 1` via AIC, FYI)
 
 ```{r}
-glm_cor
+#glm_cor
 ```
 
 <!-- # Goodness of fit of models -->
@@ -418,6 +465,15 @@ glm_cor
 
 <!-- ``` -->
 
+
+```{r}
+
+winning_fits <- winning_fits %>%
+  mutate(categorical_fit = `Best fitting model`) %>%
+  mutate(categorical_fit = as.factor(categorical_fit))
+
+
+```
 
 
 \newpage
