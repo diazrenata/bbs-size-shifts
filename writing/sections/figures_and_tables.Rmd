@@ -99,9 +99,9 @@ both_gmms <- bind_rows(real_gmms, sim_gmms)
 ```
 
 ```{r}
-isd_plots <- ggplot(both_gmms, aes(exp(mass), density, color = simtype, linetype = time)) + 
+isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(mass), density, color = simtype, linetype = time)) + 
   geom_line() + 
-  facet_wrap(vars(simtype), ncol = 2) + 
+  facet_wrap(vars(simtype), ncol = 2, scales = "free_y") + 
   theme(legend.position = "bottom") + 
   scale_color_viridis_d(option = "plasma",begin = .2,  end = .8) + 
   ylab("Probability density")+ 
@@ -117,7 +117,7 @@ isd_plots <- ggplot(both_gmms, aes(exp(mass), density, color = simtype, linetype
 
 dat_dynamics <- filter(all_sims, matssname == rn)
 
-dat_glm <- glm(total_biomass ~ timeperiod * source, data = dat_dynamics)
+dat_glm <- glm(total_biomass ~ timeperiod * source, data = dat_dynamics, family= Gamma(link = "log"))
 
 dat_lm <- lm(total_biomass ~ timeperiod * source, data = dat_dynamics)
 
@@ -141,8 +141,8 @@ timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = s
 #timeseries_plot
 ```
 
-```{r, fig.dim = c(6,5.2)}
-two_plots <- multi_panel_figure(columns = 1 ,height = c(2.25,2.75), unit = "in") %>%
+```{r, fig.dim = c(6,4.25)}
+two_plots <- multi_panel_figure(columns = 1 ,height = c(2,2.25), unit = "in") %>%
   fill_panel(timeseries_plot) %>%
   fill_panel(isd_plots)
 
@@ -151,11 +151,10 @@ two_plots
 
 #### Figure 1. 
 
-Illustration of abundance-driven (null model) dynamics as compared to observed dynamics (A), and the underlying dynamics of the ISD (B) for a sample route (`r dat_isd$metadata$location$routename`, `r dat_isd$metadata$location$regionname`). **A. Dynamics of total biomass.** The orange points show the true values for total biomass in each year, and the purple points show the values for total biomass simulated from a null model that incorporates change in total abundance, but assumes no change in the size structure, over time. The smooth lines show the predicted values from an ordinary (Gaussian) linear model of the form `total_biomass ~ year * simtype`. <!-- Using gaussian here because it is easier to interpret directly and compute r2. results are the same if you use Gamma --> The solid and dotted rectangles show the segments of the timeseries used to construct the "beginning" and "ending" ISDs shown in panel B, respectively. For this route, change in the individual size distribution has decoupled the dynamics of biomass from those that would occur due only to changes in abundance. The slope for abundance-driven dynamics is significantly more negative than for the observed dynamics (interaction term p = 0.0015), which do not have a slope significantly different from zero (slope term p = .23). **B. Underlying changes in the ISD.** The individual size distributions for the first 5 years (solid lines) and last 5 years (dashed lines) of the timeseries. The x-axis is body size (as mass in grams; note log scale) and the y-axis is probability density from a Gaussian mixture model fit to a vector of simulated individual masses for all individuals observed in the years in questions, standardized to sum to 1. For the abundance-driven (purple) scenario, individuals' species identities (which determine their body size estimates) are re-assigned at random weighte by each species' mean relative abundance throughout the timeseries, resulting in a consistent individual size distribution over time. For the observed (orange) scenario, individuals' body sizes are estimated based on their actual species identities. For this route, species composition has shifted over time, resulting in distinct ISDs for the "begin" and "end" time periods. Specifically, the "end" ISD has peaks at larger body sizes (ca. 90g and 500g) not present in the "begin" ISD. This redistribution of density towards larger body sizes results in an overall increase in body size community wise, which partially offsets declines in total biomass from those expected given change in abundance alone. 
+Illustration of abundance-driven (null model) dynamics as compared to observed dynamics (A), and the underlying dynamics of the ISD (B) for a sample route (`r dat_isd$metadata$location$routename`, `r dat_isd$metadata$location$regionname`). **A. Dynamics of total biomass.** The orange points show the true values for total biomass in each year, and the purple points show the values for total biomass simulated from a null model that incorporates change in total abundance, but assumes no change in the size structure, over time. The smooth lines show the predicted values from a Gamma (log-link) linear model of the form `total_biomass ~ year * simtype`. <!-- Using gaussian here because it is easier to interpret directly and compute r2. results are the same if you use Gamma --> For this route, change in the individual size distribution has decoupled the dynamics of biomass from those that would occur due only to changes in abundance. The slope for abundance-driven dynamics is significantly more negative than for the observed dynamics (interaction term p = 0.0013), which do not have a slope significantly different from zero (slope term p = .27). **B. Underlying changes in the ISD.** The individual size distributions for the first 5 years (solid lines) and last 5 years (dashed lines) of the timeseries. The x-axis is body size (as mass in grams; note log scale) and the y-axis is probability density from a Gaussian mixture model fit to a vector of simulated individual masses for all individuals observed in the years in questions, standardized to sum to 1. For the abundance-driven (purple) scenario, individuals' species identities (which determine their body size estimates) are re-assigned at random weighte by each species' mean relative abundance throughout the timeseries, resulting in a consistent individual size distribution over time. For the observed (orange) scenario, individuals' body sizes are estimated based on their actual species identities. For this route, species composition has shifted over time, resulting in distinct ISDs for the "begin" and "end" time periods. Specifically, the "end" ISD has peaks at larger body sizes (ca. 90g and 500g) not present in the "begin" ISD. This redistribution of density towards larger body sizes results in an overall increase in body size community wise, which partially offsets declines in total biomass from those expected given change in abundance alone. 
 
-# Biomass
-
-## Model outcomes
+\newpage
+# Model outcomes - biomasss
 
 Overall proportion of routes with winning models:
 
@@ -208,17 +207,22 @@ interaction_winning_fits %>%
 
 ```
 
-## Direction and magnitude of slopes
+\newpage
 
-```{r}
-ggplot(slope_winning_fits, aes(ratio_sim)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Abundance-driven (null model) slope")
+# Biomass slopes
+
+```{r, fig.dim = c(5, 2.5)}
+
+biomass_slopes_long <- slope_winning_fits %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "biomass_ratio") %>%
+  mutate(simtype = ifelse(source == "ratio_sim", "Abundance driven", "Observed"))
+
+ggplot(biomass_slopes_long, aes(biomass_ratio, color = simtype, fill = simtype)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "plasma", begin = .2, end = .8) + scale_fill_viridis_d(option = "plasma", begin = .2, end = .8) +
+  theme(legend.position = "bottom")
 
 ```
-
-```{r}
-ggplot(slope_winning_fits, aes(ratio_real)) + geom_histogram() + scale_x_log10() + geom_vline(xintercept = 1) + ggtitle("Observed slope")
-
-```
+\newpage
 
 ## Direction of decoupling
 
