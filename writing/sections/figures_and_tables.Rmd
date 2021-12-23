@@ -221,7 +221,7 @@ energy_slopes_long <- slope_winning_fits_energy %>%
 
 # Slopes
 
-```{r, fig.dim = c(5, 5)}
+```{r, fig.dim = c(4,4)}
 
 biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
   theme(legend.position = "none") + ggtitle("Total biomass") + xlab("")
@@ -230,11 +230,18 @@ biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color 
 energy_slope_histogram <- ggplot(energy_slopes_long, aes(energy_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
   theme(legend.position = "bottom") + ggtitle("Total metabolic flux") + xlab("Ratio of last fitted value to first fitted value")
 
-slope_histograms <- multi_panel_figure(columns = 1, height = c(2.25, 2.75), unit = "in") %>%
+slope_histograms <- multi_panel_figure(columns = 1, height = c(1.6, 2), unit = "in") %>%
   fill_panel(biomass_slope_histogram) %>%
   fill_panel(energy_slope_histogram)
 slope_histograms
 ```
+
+#### Figure 2. Long-term trends in total biomass and energy use
+
+Histograms showing the direction and magnitude of change over time for the abundance-driven (left) and observed (right) changes in biomass (A) and energy use (B), for communities with a significant slope and/or interaction term (for biomass, 500/739 routes; for energy use, 506/739 routes). Change is summarized as the ratio of the fitted value for the last year in the time series to the fitted value for the first year in the timeseries from the best-fitting model for that community. Values greater than 1 (vertical black line) indicate increases in total energy or biomass over time, and less than 1 indicate decreases. The abundance-driven dynamics (left) reflect the trends fit for the null model, while the observed dynamics (right) reflect trends incorporating both change in total abundance and change in the size structure over time. For communities with no significant interaction term in the best-fitting model, the "abundance-driven" and "observed" ratios will be the same; interaction terms will result in different ratios for "abundance-driven" and "observed" dynamics. 
+
+Abundance-driven dynamics are dominated by decreases. For biomass, observed dynamics are balanced evenly between increases and decreases - indicating that changes in the size structure produce qualitatively different long-term trends for biomass than would be expected given abundance changes alone. However, trends for energy use (which scales nonlinearly with biomass) are dominated by decreases, more closely mirroring the trends expected given changes in abundance. 
+
 \newpage
 
 # Model outcomes 
