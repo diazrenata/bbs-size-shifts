@@ -401,7 +401,7 @@ Changes in total biomass and total energy use generally track changes driven by 
 
  \newpage
  
-# Figure 4. How the ISD contributes to decoupling
+# Figure 4. How community change to decoupling
 
 ```{r}
 
@@ -412,15 +412,22 @@ winning_fits <- winning_fits %>%
   mutate(`Best fitting model` = ifelse(modelcomplexity == 1, "No trend", ifelse(modelcomplexity == 2, "Coupled trend", "Decoupled trends")))
 
 
-isd_mean_change_plot <-  ggplot(winning_fits, aes(real_mass_ratio, color = `Best fitting model`, fill= `Best fitting model`)) + 
+winning_fits <- winning_fits %>%
+  mutate(categorical_fit = `Best fitting model`) %>%
+  mutate(categorical_fit = as.factor(categorical_fit)) %>%
+  mutate(abs_log_ratio = abs(log(real_end_mean_mass / real_begin_mean_mass)),
+         log_ratio = log(real_end_mean_mass/real_begin_mean_mass)) %>%
+  mutate(isd_turnover = 1 - real_overlap)
+
+isd_mean_change_plot <-  ggplot(winning_fits, aes(log_ratio, color = `Best fitting model`, fill= `Best fitting model`)) + 
   geom_histogram() + 
   facet_wrap(vars(`Best fitting model`), scales = 'free_y', ncol = 1) +
   scale_color_viridis_d(option = "mako", end = .8, direction = -1) +     
   scale_fill_viridis_d(option = "mako", end = .8, direction = -1) +
   theme(legend.position = "none") +
-  xlab("Ratio of mean mass\n(last five years / first five years)") +
+  xlab("Mean mass log ratio") +
   ylab("Count") +
-  ggtitle("Change in mean body size")
+  ggtitle("Mean size change")
 # 
 # mean_change_coupled <- filter(winning_fits, modelcomplexity == 2)
 # mean_change_decoupled <- filter(winning_fits, modelcomplexity == 4)
@@ -443,15 +450,26 @@ isd_mean_change_plot <-  ggplot(winning_fits, aes(real_mass_ratio, color = `Best
 
 ```{r}
 
-
-isd_overlap_plot <- ggplot(winning_fits, aes(real_overlap,color = `Best fitting model`, fill= `Best fitting model`)) + 
+isd_overlap_plot <- ggplot(winning_fits, aes(isd_turnover,color = `Best fitting model`, fill= `Best fitting model`)) + 
   geom_histogram() + 
   facet_wrap(vars(`Best fitting model`), scales = 'free_y', ncol = 1) +
   scale_color_viridis_d(option = "mako", end = .8, direction = -1) +  scale_fill_viridis_d(option = "mako", end = .8, direction = -1) +
   theme(legend.position = "none") +
-  xlab("ISD overlap\n(last five years vs. first five years)") +
+  xlab("ISD turnover") +
   ylab("Count") +
-  ggtitle("Overall change in ISD")
+  ggtitle("ISD turnover")
+
+
+
+
+bcd_plot <- ggplot(winning_fits, aes(sp_turnover_bcd,color = `Best fitting model`, fill= `Best fitting model`)) + 
+  geom_histogram() + 
+  facet_wrap(vars(`Best fitting model`), scales = 'free_y', ncol = 1) +
+  scale_color_viridis_d(option = "mako", end = .8, direction = -1) +  scale_fill_viridis_d(option = "mako", end = .8, direction = -1) +
+  theme(legend.position = "none") +
+  xlab("Bray-Curtis index") +
+  ylab("Count") +
+  ggtitle("Species turnover")
  # isd_overlap_plot
 # 
 # isd_glm <- glm(real_overlap ~ model_formula, family = "binomial", data = winning_fits)
@@ -462,46 +480,95 @@ isd_overlap_plot <- ggplot(winning_fits, aes(real_overlap,color = `Best fitting 
 # glm_cor <- cor(predict(isd_glm, type = "response"), isd_glm$model[,1]) ^ 2
 ```
 
-```{r, fig.dim = c(5.5, 4)}
+```{r, fig.dim = c(6, 3.5)}
 
-isd_change_plots <- multi_panel_figure(columns = 2, rows = 1) %>%
+isd_change_plots <- multi_panel_figure(columns = 3, rows = 1) %>%
   fill_panel(isd_mean_change_plot) %>%
-  fill_panel(isd_overlap_plot)
+  fill_panel(isd_overlap_plot) %>%
+  fill_panel(bcd_plot)
 isd_change_plots
 ```
 
 
-#### Figure 4. Histograms of change in the size structure for routes showing no trends, coupled, and decoupled trends in abundance-driven and observed dynamics.
+#### Figure 4. Histograms of change in community structure for routes showing no trends, coupled, and decoupled trends in abundance-driven and observed dynamics.
 
-Histograms of (A) change in mean body size from the first to the last five years of monitoring and (B) overall change in the size structure for routes whose dynamics for  total biomass were best-described using no temporal trend (bottom row; intercept-only model), separate trends for observed and abundance-driven dynamics (middle row), or the same trend for observed and abundance-driven dynamics (top row). Change in mean body size (A) is calculated as the ratio of the mean body size of all individuals observed in the last 5 years of the timeseries relative to the mean body size of all individuals observed in the first 5 years. Overall change in the ISD (B) is calculated as the degree of overlap between the ISDs for the first and last five years of the timeseries (see text). 
+Histograms of (A) change in mean body size from the first to the last five years of monitoring, (B) overall change in the size structure, and (C) change in species composition for routes whose dynamics for  total biomass were best-described using no temporal trend (bottom row; intercept-only model), separate trends for observed and abundance-driven dynamics (middle row), or the same trend for observed and abundance-driven dynamics (top row). Change in mean body size (A) is calculated as the ratio of the mean body size of all individuals observed in the last 5 years of the timeseries relative to the mean body size of all individuals observed in the first 5 years. Overall change in the ISD (B) is calculated as the degree of turnover between the ISDs for the first and last five years of the timeseries (see text). Change in species composition (C) is Bray-Curtis dissimilarity comparing species composition in the first five years to the last five years. 
 
-Routes that exhibit decoupling between observed and abundance-driven changes in total biomass exhibit a high prevalence of increases and decreases in mean body size (middle row, panel A) compared to the changes seen in routes that show either no trend or non-decoupled trends. However, routes with all three signatures of dynamics (coupling, decoupling, or no trend) are comparable in the degree of overall change in the ISD over time (panel B).
+Routes that exhibit decoupling between observed and abundance-driven changes in total biomass exhibit a high prevalence of increases and decreases in mean body size (middle row, panel A) compared to the changes seen in routes that show either no trend or non-decoupled trends. However, routes with all three signatures of dynamics (coupling, decoupling, or no trend) are not detectably different in the degree of overall change in the ISD or in species composition over time (panels B and C).
 
-<!-- I am working on methods for comparing these statistically. Depending on the approach I use I get small differences in overlap for the decoupled vs. not-decoupled dynamics, with terrible R2 (like <5%), and obviously the mean body size changes are pronounced. The mean body size changes are mathematically forced.  -->
+\newpage
 
-```{r}
-#glm_cor
-```
+# Statistical comparisons of distributions in Figure 4
 
-<!-- # Goodness of fit of models -->
+### Mean mass
 
-<!-- ```{r} -->
+Linear model fit to `abs(log(end_mean_mass / begin_mean_mass))`:
 
-<!-- ggplot(winning_fits, aes(model_cor_squared)) + geom_histogram() + facet_wrap(vars(model_formula), scales = "free_y") -->
+First, anova comparing a model fit as `abs_log_ratio ~ model_type` to an intercept-only model:
 
-<!-- ggplot(winning_fits_energy, aes(model_cor_squared)) + geom_histogram() + facet_wrap(vars(model_formula), scales = "free_y") -->
+```{r, results = T}
 
-<!-- ``` -->
+mean_mass_lm <- lm(abs_log_ratio ~ categorical_fit, data = winning_fits)
 
+mean_mass_lm_intercept <- lm(abs_log_ratio ~ 1, data = winning_fits)
 
-```{r}
-
-winning_fits <- winning_fits %>%
-  mutate(categorical_fit = `Best fitting model`) %>%
-  mutate(categorical_fit = as.factor(categorical_fit))
-
+anova(mean_mass_lm, mean_mass_lm_intercept)
 
 ```
+
+
+The fit to model type is superior to the intercept-only model, so evaluating the estimated values and contrasts:
+
+```{r, results = T}
+mean_mass_lm_emmeans <- emmeans::emmeans(mean_mass_lm, specs = ~ categorical_fit)
+
+as.data.frame(mean_mass_lm_emmeans)
+
+as.data.frame(pairs(mean_mass_lm_emmeans))
+```
+
+
+Decoupled trends models have higher absolute log ratios than no trend or coupled trend models. 
+
+
+### ISD turnover
+
+Comparing a binomial GLM (ISD overlap is bounded 0-1) fit to model type to an intercept-only model:
+
+
+```{r, results = T}
+
+overlap_glm <- glm(isd_turnover ~ categorical_fit, data = winning_fits, family = "binomial")
+
+overlap_glm_intercept <- glm(isd_turnover ~ 1, data = winning_fits, family = "binomial")
+
+anova(overlap_glm, overlap_glm_intercept, test = "Chi")
+
+```
+
+
+The model fit model is not superior to the intercept only model (p = .91).
+
+
+### Bray-Curtis dissimilarity
+
+
+Comparing a binomial GLM fit to model type to an intercept-only model:
+
+
+```{r, results = T}
+
+bcd_glm <- glm(sp_turnover_bcd ~ categorical_fit, data = winning_fits, family = "binomial")
+
+bcd_glm_intercept <- glm(sp_turnover_bcd ~ 1, data = winning_fits, family = "binomial")
+
+anova(bcd_glm, bcd_glm_intercept, test = "Chi")
+
+```
+
+
+The model fit model is not superior to the intercept only model (p = .37).
+
 
 
 \newpage
