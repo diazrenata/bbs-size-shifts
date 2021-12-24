@@ -296,6 +296,17 @@ fiveyr_compare <- function(dat) {
   sim_end_mean_mass <- mean(end_isd_sim$mass)
 
 
+  sp_matrix <- bind_rows(begin_isd_real, end_isd_real) %>%
+    mutate(timeperiod = ifelse(year < 2000, "begin", 'end')) %>%
+    group_by(timeperiod, id) %>%
+    summarize(abund = dplyr::n()) %>%
+    tidyr::pivot_wider(id_cols= timeperiod, names_from = id, values_from = abund, values_fill = 0) %>%
+    ungroup() %>%
+    select(-timeperiod) %>%
+    as.matrix()
+
+  real_bcd <- vegan::vegdist(sp_matrix, "bray")[1]
+
   out <- data.frame(
     real_overlap = real_overlap$overlap[1],
     sim_overlap = sim_overlap$overlap[1],
@@ -306,7 +317,8 @@ fiveyr_compare <- function(dat) {
     sim_begin_mean_mass = sim_begin_mean_mass,
     sim_end_mean_mass = sim_end_mean_mass,
     real_mass_ratio = real_end_mean_mass / real_begin_mean_mass,
-    sim_mass_ratio = sim_end_mean_mass / sim_begin_mean_mass
+    sim_mass_ratio = sim_end_mean_mass / sim_begin_mean_mass,
+    sp_turnover_bcd = real_bcd
   ) %>%
     bind_cols(dat$metadata$location) %>%
     mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))

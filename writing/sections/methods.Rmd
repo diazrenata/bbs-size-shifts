@@ -42,29 +42,26 @@ Comparing trends across different currencies is a nontrivial statistical challen
 
 Rather than attempting to compare slopes across currencies or to transform different currencies to a common scale, I use a simple null model to compare the observed dynamics for biomass and energy use to the dynamics that would occur in a scenario in which the species (and therefore size) composition of the community was consistent throughout the timeseries, but in which total abundance varied over time consistent with the observed dynamics. For each route, we characterized the "observed" timeseries of total biomass and total energy use by simulating size measurements for all individuals observed in each time step and summing across individuals, using the method described above. We then created simulated timeseries for biomass and energy use by re-assigning the species identities of individuals based on each species' mean relative abundance throughout the timeseries. For each time step, we calculated the relative abundance for each species. For each species, we then took the mean relative abundance over all time steps. We used the distribution of species' mean relative abundances as the weights for a multinomial distribution describing the probability than an individual drawn at random from the community is of a particular species. For every timestep, we assigned species identities to individuals by sampling the observed number of individuals from this timeseries-wide multinomial distribution. We then simulated body size measurements for individuals, and calculated total energy use and total biomass, following the same procedure as for the observed community. This estimates the dynamics for size-based currencies expected if the species (and size) composition of the community does not change over time, but incorporating observed fluctuations in total abundance. 
 
-### Linear trends
+## Long-term trends
 
-For each route, we evaluated the 30-year trend in biomass (or energy use) and compared this to the trend derived from the null model using generalized linear models with a Gamma family and log link. We fit four models to characterize 1) the trend in biomass (or energy use) over time and 2) whether this trend deviates from the trend expected given only changes in abundance:
+For each route, we evaluated the 30-year trend in biomass (or energy use) and compared this to the trend derived from the null model using generalized linear models with a Gamma family and log link (appropriate for strictly-positive data such as biomass or total metabolic flux). We fit four models to characterize 1) the trend in biomass (or energy use) over time and 2) whether this trend deviates from the trend expected given only changes in abundance:
 
-1. `biomass ~ year * source`, in which "source" refers to being either the "observed" or "null model" value. This model fits a slope and intercept for the observed trend biomass over time, and a separate slope and intercept for the trend drawn from the null model.
-2. `biomass ~ year + source`. This model fits a separate intercept, but not slope, for the null model.
-3. `biomass ~ year`. This model fits a temporal trend, but does not fit separate trends for the observed and null data.
-4. `biomass ~ 1`. The intercept-only model describes no directional change over time for either the observed or null data.
+1. `biomass ~ year * source`, in which "source" refers to being either the "observed" or "abundance-driven" value. This model fits a slope and intercept for the observed trend in  biomass (or energy use) over time, and a separate slope and intercept for the trend drawn from the abundance-driven, or null model, dynamics.
+2. `biomass ~ year + source`. This model fits a separate intercept, but not slope, for the abundance-driven and observed dynamics.
+3. `biomass ~ year`. This model fits a temporal trend, but does not fit separate trends for the observed and abundance-driven dynamics.
+4. `biomass ~ 1`. The intercept-only model describes no directional change over time for either the observed or abundance-driven dynamics. 
 
 We selected the best-fitting model using AICc. In instances where multiple models had AICc scores within two AICc units of each other, we selected the simplest model within two units of the best score.
 
 For each route's best-fitting model, we extracted the predicted values for the first (usually 1988) and last (usually 2018) year sampled, for both the observed and null trajectories. We calculated the magnitude of change over time as the ratio of the last (2018) to the first (1988) value.
 
-### Distinguishing between stasis and nondirectional variability
+## Relating change in community structure to decoupling between abundance and size-based dynamics
 
-It is important to recognize that the absence of a linear temporal trend, or an absence of *different* linear trends for observed and null dynamics, do not directly imply the absence of variability over time or between observed and null dynamics. We explored the level of variability in both the temporal trends and in the correspondence between the observed and null dynamics, to distinguish between scenarios of very little change or decoupling, and scenarios of high variability that is not well-captured by a linear trend or interaction. First, we calculated the degree of variability (coefficient of variation) in biomass and total energy use for each route and compared the variability observed in routes best-characterized by different models. Second, we examined the correlation coefficient relating observed values to simulated values for biomass (or energy use) and compared the distribution of correlation coefficients among routes well-described by "decoupled" models and simpler models. 
+Change in mean body size
 
-### Distinguishing observed vs. null dynamics
+ISD turnover (say turnover rather than overlap, I like that).
 
-<!-- I don't know where this paragraph - or this analysis, really - belong. -->
-
-As a test of whether observed dynamics were more dissimilar to null dynamics than can be accounted for by sampling error within the null model, we calculated the correlation coefficient for 100 draws from the null model compared to the focal draw used for the linear model analyses. We calculated the percentile score of the observed correlation coefficient relative to draws from the null model, and calculated the difference between the observed correlation coefficient and the mean correlation coefficient across all draws from the null model.
-
+If feeling fancy, could add BCD to measure *species* turnover. 
 
 \newpage
 # References
