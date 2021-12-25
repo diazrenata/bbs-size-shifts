@@ -57,11 +57,19 @@ For each route's best-fitting model, we extracted the predicted values for the f
 
 ## Relating change in community structure to decoupling between abundance and size-based dynamics
 
-Change in mean body size
+Community dissimilarity metrics make the most sense when making pairwise comparisons. We compared the first and last  five-year intervals in each timeseries, resulting in a "begin" and "end" comparison separated by a consistent window of time across routes (19-20 years). The use of five-year periods corrects for sampling effects (@white2004a), smooths out interannual variability, and, by including a relatively large proportion (1/3) of the total timeseries, should reduce the impact of the scenario where the start and end values do not align with the long-term trend. 
 
-ISD turnover (say turnover rather than overlap, I like that).
+Metrics: 
 
-If feeling fancy, could add BCD to measure *species* turnover. 
+Change in mean body size as the log ratio of mean body size in the last five years over the mean body size in the first five years.
+
+ISD turnover (say turnover rather than overlap) by fitting GMMs (following Thibault), turning into scaled density functions, and calculating the area of overlap (following Read). Turnover is 1-overlap.
+
+BCD to measure species turnover. Compare species composition in the first five years to the last five years. 
+
+Statistical comparison:
+
+For mean body size, use the absolute log ratio because this will capture the *magnitude* of change. Fit an ordinary linear model. For turnover metrics, fit binomial GLM (because bounded 0-1). Compare fit of model fit to model_type to an intercept only model. Explore contrasts using emmeans. 
 
 \newpage
 # References
