@@ -13,7 +13,7 @@ source(here::here("analyses", "fxns", "hasty_fxns.R"))
 datasets <- MATSS::build_bbs_datasets_plan()
 
 
-working_datasets <- read.csv(here::here("analyses", "supporting_data","ninetypercent_coverage_1988_2018.csv"))
+working_datasets <- read.csv(here::here("analyses", "supporting_data","eightypercent_coverage_1988_2018.csv"))
 
 
 datasets <- datasets[ which(datasets$target %in% working_datasets$matssname), ]
