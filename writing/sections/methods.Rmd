@@ -57,15 +57,19 @@ For each route, we evaluated the 30-year trend in biomass (or energy use) and co
 
 We selected the best-fitting model using AICc. In instances where multiple models had AICc scores within two AICc units of each other, we selected the simplest model within two units of the best score.
 
-For each route's best-fitting model, we extracted the predicted values for the first (usually 1988) and last (usually 2018) year sampled, for both the observed and null trajectories. We calculated the magnitude of change over time as the ratio of the last (2018) to the first (1988) value.
+For each route's best-fitting model, we extracted the predicted values for the first (usually 1988) and last (usually 2018) year sampled, for both the observed and null trajectories. We calculated the magnitude of change over time as the ratio of the last (2018) to the first (1988) value, and characterized the direction of the long-term trend as increasing if this ratio was greater than one, and decreasing if it was less than one. 
 
 ## Relating change in community structure to decoupling between abundance and size-based dynamics
 
 Community dissimilarity metrics make the most sense when making pairwise comparisons. We compared the first and last  five-year intervals in each timeseries, resulting in a "begin" and "end" comparison separated by a consistent window of time across routes (19-20 years). The use of five-year periods corrects for sampling effects (@white2004a), smooths out interannual variability, and, by including a relatively large proportion (1/3) of the total timeseries, partially mitigates the impact of scenarios where the start and end values do not align with the long-term trend. 
 
-Metrics: 
+We calculated three metrics to explore how changes in community composition and size structure translate into decoupling between abundance-driven and observed dynamics for biomass and energy use.  First, we evaluated the change in average community-wide body size, calculated as the log ratio of mean body size in the last five years relative to the mean body size in the first five years:
 
-Change in mean body size as the log ratio of mean body size in the last five years over the mean body size in the first five years.
+$log(\frac{\bar{m}_{last5}}{\bar{m}_{first5}})$
+
+where $\bar{m}_{last5}$ is the mean body size of all individuals observed in the last 5 timesteps. Large changes in average body size are, by definition, expected to translate into decoupling between observed and abundance-driven dynamics.
+
+Second, we calculated measures of turnover in the size structure and in species composition. We calculated turnover in the ISD following an overlap measure that has previously been applied to species body size distributions in mammalian communities (@read2018). First 
 
 ISD turnover (say turnover rather than overlap) by fitting GMMs (following Thibault), turning into scaled density functions, and calculating the area of overlap (following Read). Turnover is 1-overlap.
 
