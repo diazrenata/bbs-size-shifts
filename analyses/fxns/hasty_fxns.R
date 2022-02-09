@@ -1,8 +1,16 @@
-library(rwar)
-library(BBSsize)
+library(dissBBSsize)
 library(dplyr)
 library(ggplot2)
-slice_dat <- function(dataset, keep_years = c(1988:2018)) {
+
+#' Slice data
+#'
+#' @param dataset a MATSS-formatted dataset
+#' @param keep_years which years to keep
+#'
+#' @return dataset subsetted to the years in keep_years
+#' @export
+#'
+pull_focal_years <- function(dataset, keep_years = c(1988:2018)) {
 
   keep_rows <- which(dataset$covariates$year %in% keep_years)
 
@@ -14,66 +22,111 @@ slice_dat <- function(dataset, keep_years = c(1988:2018)) {
   dat_out
 }
 
-resp_dat <- function(dataset, resp_seed = 1989) {
-  #
-  #   spTotalAbunds <- colSums(dataset$abundance)
-  #   spRelAbunds <- spTotalAbunds / sum(spTotalAbunds)
+#' Null model of no size change
+#'
+#' Resamples species' abundances according to their mean relative abundance across the entire timeseries.
+#'
+#' This is the null model to characterize "no change in the size structure" by keeping species composition fixed to the long-term average across the timeseries.
+#'
+#' @param dataset a MATSS dataset
+#' @param resp_seed a seed
+#'
+#' @return
+#'
+relabund_null_model <- function(dataset, resp_seed = 1989) {
 
+  # Compute each species' relative abundance (proportion of total abundance in that year) in each year
   spRelAbunds <- dataset$abundance/ rowSums(dataset$abundance)
+
+  # Compute each species' average relative abundance across all years
   spRelAbunds <- colSums(spRelAbunds) / nrow(spRelAbunds)
 
+  # Function to draw N individuals (N being the number of individuals seen in a given year) with probabilities weighted according to species' mean relative abundance across all eyears
   draw_year <- function(year_row, spRelAbunds) {
     as.data.frame(t(rmultinom(1, size  = sum(year_row), prob = spRelAbunds)))
   }
 
   set.seed(resp_seed)
 
+  # Draw species' abundances
   newAbund <- apply(dataset$abundance, MARGIN = 1, FUN = draw_year, spRelAbunds = spRelAbunds)
   set.seed(NULL)
-  dataset$abundance <- bind_rows(newAbund)
+
+  dataset$abundance <- dplyr::bind_rows(newAbund)
 
   dataset
 }
 
+#' Calculate state variables for each year off an ISD
+#'
+#' @param isd list with $isd, $metadata. $metadata is MATSS metadata. $isd is a dataframe with columns id (spID), mass, year, isd_seed
+#'
+#' @return dataframe with state variables off ISD plus location data
+#' @export
+#'
+#' @importFrom dplyr mutate group_by summarize n ungroup rename bind_cols
+#' @importFrom dissBBSsize estimate_b
 calc_sv <- function(isd) {
 
   sv_isd <- isd$isd %>%
-    mutate(energy = estimate_b(mass)) %>%
-    group_by(year) %>%
-    summarize(abundance = dplyr::n(),
-              total_biomass = sum(mass),
-              total_energy = sum(energy)) %>%
-    ungroup()%>%
-    rename(timeperiod = year)
+    dplyr::mutate(energy = dissBBSsize::estimate_b(mass)) %>%
+    dplyr::group_by(year) %>%
+    dplyr::summarize(abundance = dplyr::n(),
+                     total_biomass = sum(mass),
+                     total_energy = sum(energy)) %>%
+    dplyr::ungroup()%>%
+    dplyr::rename(timeperiod = year)
 
-  bind_cols(sv_isd, isd$metadata$location)
+  dplyr::bind_cols(sv_isd, isd$metadata$location)
 }
 
-whole_thing <- function(dat) {
-  dat_sliced <-slice_dat(dat)
+#' Get annual state variables
+#'
+#' High level wrapper to get annual state variables for observed and null model (abundance-driven) dynamics.
+#'
+#' @param dat MATSS dataset
+#'
+#' @return
+#' @export
+#' @importFrom dissBBSsize simulate_isd_ts
+#' @importFrom dplyr mutate bind_rows
+get_annual_state_variables <- function(dat) {
 
-  dat_resp <- resp_dat(dat_sliced, resp_seed = 1989)
+  dat_sliced <- pull_focal_years(dat) # pull years we want
 
-  dat_isd <- simulate_isd_ts(dat_sliced, isd_seed = 1989)
+  dat_resp <- relabund_null_model(dat_sliced, resp_seed = 1989) # null model
 
-  dat_resp_isd <- simulate_isd_ts(dat_resp, isd_seed = 1989)
+  dat_isd <- dissBBSsize::simulate_isd_ts(dat_sliced, isd_seed = 1989) # isd for observed
 
+  dat_resp_isd <- dissBBSsize::simulate_isd_ts(dat_resp, isd_seed = 1989) # isd for null model
 
-
+  # annual state variables for observed
   real_sv <- calc_sv(dat_isd) %>%
-    mutate(source = "real")
-  sim_sv <- calc_sv(dat_resp_isd) %>%
-    mutate(source = "sim")
+    dplyr::mutate(source = "real")
 
-  both_sv <- bind_rows(real_sv, sim_sv)  %>%
-    mutate(fsource = as.factor(source),
+  # annual state variables for null model
+  sim_sv <- calc_sv(dat_resp_isd) %>%
+    dplyr::mutate(source = "sim")
+
+  # combine annual state variables
+  both_sv <- dplyr::bind_rows(real_sv, sim_sv)  %>%
+    dplyr::mutate(fsource = as.factor(source),
            matssname = paste0("bbs_rtrg_", dat$metadata$location$route, "_", dat$metadata$location$statenum),
            simtype = "actual")
 
   both_sv
 }
 
-hasty_models <- function(sims) {
+#' Fit models - biomass
+#'
+#' Fit models corresponding to syndromes of "no trend", "trend", "decoupled trend". Fits using both Gaussian and Gamma (log link) generalized linear models.
+#'
+#' @param sims result of get_annual_state_variables
+#'
+#' @return
+#' @export
+#'
+fit_trend_models_biomass <- function(sims) {
 
 
   models <- list(
@@ -95,8 +148,16 @@ hasty_models <- function(sims) {
 
 }
 
-
-hasty_energy_models <- function(sims) {
+#' Fit models - energy
+#'
+#' Fit models corresponding to syndromes of "no trend", "trend", "decoupled trend". (also fits a separate intercept model but in practice it never gets used). Fits using both Gaussian and Gamma (log link) generalized linear models.
+#'
+#' @param sims result of get_annual_state_variables
+#'
+#' @return list of 8 models
+#' @export
+#'
+fit_trend_models_energy <- function(sims) {
 
 
   models <- list(
@@ -119,25 +180,35 @@ hasty_energy_models <- function(sims) {
 }
 
 
-hasty_model_aic <- function(some_models) {
+#' Model comparison metrics
+#'
+#' Compute p values and AIC values comparing models fit with different terms. P values could be used in a kind of stepwise selection context, but I prefer to use AIC because you can compare all 4 together instead of the sequential P values.
+#'
+#' @param some_models result of fit_trend_models_energy or fit_trend_models_biomass
+#'
+#' @return dataframe of model name, aic, p values for sequential, model complexity (1-4 with 4 high)
+#' @export
+#'
+#' @importFrom dplyr bind_rows mutate
+eval_trend_models <- function(some_models) {
 
-  p_interaction <- anova(some_models$gaussian_glm_full, some_models$gaussian_glm_noint, test = "F")[2,6]
-  p_sourceintercept <- anova(some_models$gaussian_glm_noint, some_models$gaussian_glm_nos, test = "F")[2,6]
-  p_slope <- anova(some_models$gaussian_glm_nos,some_models$gaussian_glm_notime, test = "F")[2,6]
+  p_interaction <- anova(some_models$gaussian_glm_full, some_models$gaussian_glm_noint, test = "F")[2,6] # p value comparing year * source to year + source
+  p_sourceintercept <- anova(some_models$gaussian_glm_noint, some_models$gaussian_glm_nos, test = "F")[2,6] # p value comparing year + source to year
+  p_slope <- anova(some_models$gaussian_glm_nos,some_models$gaussian_glm_notime, test = "F")[2,6]  # p value comparing year to intercept-only
 
-  gaussian_aics <- bind_rows(lapply(some_models[1:4], model_aic)) %>%
-    mutate(model_p = c(p_interaction, p_sourceintercept, p_slope, NA),
-           modelcomplexity = c(4,3,2,1))
-
-
-  p_gamma_interaction <- anova(some_models$gamma_glm_full, some_models$gamma_glm_noint, test = "F")[2,6]
-  p_gamma_sourceintercept <- anova(some_models$gamma_glm_noint, some_models$gamma_glm_nos, test = "F")[2,6]
-  p_gamma_slope <- anova(some_models$gamma_glm_nos,some_models$gamma_glm_notime, test = "F")[2,6]
+  gaussian_aics <- dplyr::bind_rows(lapply(some_models[1:4], pull_model_aic)) %>% # AIC for each model
+    dplyr::mutate(model_p = c(p_interaction, p_sourceintercept, p_slope, NA),
+           modelcomplexity = c(4,3,2,1)) # assign a model complexity for sorting purposes
 
 
-  gamma_aics <- bind_rows(lapply(some_models[5:8], model_aic)) %>%
+  p_gamma_interaction <- anova(some_models$gamma_glm_full, some_models$gamma_glm_noint, test = "F")[2,6]# p value comparing year * source to year + source
+  p_gamma_sourceintercept <- anova(some_models$gamma_glm_noint, some_models$gamma_glm_nos, test = "F")[2,6]# p value comparing year + source to year
+  p_gamma_slope <- anova(some_models$gamma_glm_nos,some_models$gamma_glm_notime, test = "F")[2,6]# p value comparing year to intercept-only
+
+
+  gamma_aics <- bind_rows(lapply(some_models[5:8], pull_model_aic)) %>% # AIC for each model
     mutate(model_p = c(p_gamma_interaction, p_gamma_sourceintercept, p_gamma_slope, NA),
-           modelcomplexity = c(4,3,2,1))
+           modelcomplexity = c(4,3,2,1))# assign a model complexity for sorting purposes
 
   all_aics <- bind_rows(gaussian_aics, gamma_aics)
 
@@ -146,14 +217,24 @@ hasty_model_aic <- function(some_models) {
 
 }
 
-model_aic <- function(one_model) {
+#' Extract AIC for one model
+#'
+#' @param one_model a GLM from the list of models returned from fit_trend_models_biomass or fit_trend_models_energy
+#'
+#' @return data frame with model family, link function, formula, dataset name, AIC, AICc
+#' @export
+#'
+#' @importFrom dplyr mutate
+#' @importFrom AICcmodavg AICc
+pull_model_aic <- function(one_model) {
 
   one_model_aic <- data.frame(model_AIC = AIC(one_model),
                               model_AICc = AICcmodavg::AICc(one_model)) %>%
-    mutate(model_family = one_model$family$family,
+    dplyr::mutate(model_family = one_model$family$family,
            model_link = one_model$family$link,
            model_formula = toString(one_model$formula[3]),
            matssname = one_model$data$matssname[1])
+  one_model_aic
 }
 
 hasty_model_predicted_change <- function(some_models) {

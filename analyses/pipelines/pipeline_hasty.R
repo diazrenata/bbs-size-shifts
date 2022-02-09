@@ -1,8 +1,7 @@
 library(dplyr)
-#library(rwar)
 library(drake)
 library(MATSS)
-library(BBSsize)
+library(dissBBSsize)
 
 
 run_hpg = T
