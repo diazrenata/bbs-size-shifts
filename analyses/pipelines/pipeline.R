@@ -57,7 +57,7 @@ all = bind_rows(datasets, methods)
 
 
 ## Set up the cache and config
-db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all_hasty_toy.sqlite"))
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all.sqlite"))
 cache <- storr::storr_dbi("datatable", "keystable", db)
 cache$del(key = "lock", namespace = "session")
 
