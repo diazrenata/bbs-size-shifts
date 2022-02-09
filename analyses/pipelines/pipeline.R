@@ -7,7 +7,7 @@ library(dissBBSsize)
 run_hpg = T
 #max_caps <- c(75, 150, 225, 300, 375, 450, 528)
 # for(i in 1:length(max_caps)) {
-source(here::here("analyses", "fxns", "hasty_fxns.R"))
+source(here::here("analyses", "fxns", "is_fxns.R"))
 #i = 1
 datasets <- MATSS::build_bbs_datasets_plan()
 
@@ -19,38 +19,38 @@ datasets <- datasets[ which(datasets$target %in% working_datasets$matssname), ]
 
 
 methods <- drake_plan(
-  ssims = target(whole_thing(dataset),
+  annual_svs = target(get_annual_state_variables(dataset),
                  transform = map(
                    dataset = !!rlang::syms(datasets$target)
                  )),
-  all_sims = target(dplyr::bind_rows(ssims),
-                    transform = combine(ssims)),
-  glms = target(hasty_models(ssims),
-                transform = map(ssims)),
-  aics = target(hasty_model_aic(glms),
-                transform = map(glms)),
-  preds = target(hasty_model_predicted_change(glms),
-                 transform = map(glms)),
-  all_aics = target(dplyr::bind_rows(aics),
-                    transform = combine(aics)),
-  all_preds = target(dplyr::bind_rows(preds),
-                     transform = combine(preds)),
-  glms_energy = target(hasty_energy_models(ssims),
-                       transform = map(ssims)),
-  aics_energy = target(hasty_model_aic(glms_energy),
-                       transform = map(glms_energy)),
-  preds_energy = target(hasty_model_predicted_change(glms_energy),
-                        transform = map(glms_energy)),
-  all_aics_energy = target(dplyr::bind_rows(aics_energy),
-                           transform = combine(aics_energy)),
-  all_preds_energy = target(dplyr::bind_rows(preds_energy),
-                            transform = combine(preds_energy)),
-  isd_compares = target(fiveyr_compare(dataset),
+  all_sims = target(dplyr::bind_rows(annual_svs),
+                    transform = combine(annual_svs)),
+  glms_b = target(fit_trend_models_biomass(annual_svs),
+                transform = map(annual_svs)),
+  aics_b = target(eval_trend_models(glms_b),
+                transform = map(glms_b)),
+  preds_b = target(all_models_predicted_change(glms_b),
+                 transform = map(glms_b)),
+  all_aics_b = target(dplyr::bind_rows(aics_b),
+                    transform = combine(aics_b)),
+  all_preds_b = target(dplyr::bind_rows(preds_b),
+                     transform = combine(preds_b)),
+  glms_e = target(fit_trend_models_energy(annual_svs),
+                       transform = map(annual_svs)),
+  aics_e = target(eval_trend_models(glms_e),
+                       transform = map(glms_e)),
+  preds_e = target(all_models_predicted_change(glms_e),
+                        transform = map(glms_e)),
+  all_aics_e = target(dplyr::bind_rows(aics_e),
+                           transform = combine(aics_e)),
+  all_preds_e = target(dplyr::bind_rows(preds_e),
+                            transform = combine(preds_e)),
+  cs_compares = target(compare_community_structure(dataset),
                         transform = map(
                           dataset = !!rlang::syms(datasets$target)
                         )),
-  all_isd_compares = target(dplyr::bind_rows(isd_compares),
-                            transform = combine(isd_compares))
+  all_cs_compares = target(dplyr::bind_rows(cs_compares),
+                            transform = combine(cs_compares))
 )
 
 all = bind_rows(datasets, methods)

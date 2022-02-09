@@ -237,38 +237,65 @@ pull_model_aic <- function(one_model) {
   one_model_aic
 }
 
-hasty_model_predicted_change <- function(some_models) {
+#' Get predicted trends from all models
+#'
+#' Get predicted trends from all models in a list
+#'
+#' @param some_models list of models produced using fit_trend_models_biomass or fit_trend_models_energy
+#'
+#' @return dataframe of predicted changes
+#' @export
+#'
+#' @importFrom dplyr bind_rows
+all_models_predicted_change <- function(some_models) {
 
   predicted_changes <- lapply(some_models, model_predicted_change)
 
-  predicted_changes <- bind_rows(predicted_changes)
+  predicted_changes <- dplyr::bind_rows(predicted_changes)
   predicted_changes
 }
 
 
+#' Get predicted long-term change from a single model
+#'
+#' Primarily, calculates the long-term change (ratio of last fitted value to first fitted value) from the predicted values of a model.
+#' Using this rather than the estimate of the slope terms, because the estimated slope terms from a Gamma model are not intuitive to interpret from the readout alone.
+#'
+#' @param one_model one model from the lists produced by fit_trend_models_biomass or fit_trend_models_energy
+#'
+#' @return data frame of predicted change, timespan, begin year, end year, correlation coefficient predicted/actual data, correlation coefficient squared, model info
+#' @export
+#'
+#' @importFrom dplyr filter mutate select
+#' @importFrom tidyr pivot_wider
 model_predicted_change <- function(one_model) {
 
+  # Get predicted response values from the model
   model_dat <- one_model$data %>%
     mutate(predvals = predict(one_model, type = "response"))
 
+  # Correlation coefficient to calculatea kind of r2
   model_cor <- cor(model_dat$predvals, one_model$model[,1])
 
   cor_squared = model_cor ^ 2
 
+
+  # Get begin and end years and the time span
   model_begin <- min(model_dat$timeperiod)
   model_end <- max(model_dat$timeperiod)
   model_span <- model_end - model_begin
 
+
   model_change <- model_dat %>%
-    filter(timeperiod  %in% c(model_end, model_begin)) %>%
-    mutate(timeperiod_name = ifelse(timeperiod == model_end, "end", "begin")) %>%
-    select(timeperiod_name, predvals, source) %>%
+    dplyr::filter(timeperiod  %in% c(model_end, model_begin)) %>%
+    dplyr::mutate(timeperiod_name = ifelse(timeperiod == model_end, "end", "begin")) %>%
+    dplyr::select(timeperiod_name, predvals, source) %>%
     tidyr::pivot_wider(names_from = c(timeperiod_name, source), values_from = predvals) %>%
-    mutate(ratio_sim = end_sim / begin_sim,
+    dplyr::mutate(ratio_sim = end_sim / begin_sim,
            ratio_real = end_real / begin_real,
            model_cor = model_cor,
            model_cor_squared = cor_squared) %>%
-    mutate(model_family = one_model$family$family,
+    dplyr::mutate(model_family = one_model$family$family,
            model_link = one_model$family$link,
            model_formula = toString(one_model$formula[3]),
            model_begin = model_begin,
@@ -281,83 +308,113 @@ model_predicted_change <- function(one_model) {
   model_change
 }
 
-cor_compare <- function(dataset, ndraws) {
+# Not used
+#
+# cor_compare <- function(dataset, ndraws) {
+#
+#
+#   focal_sim <- resp_dat(dataset, 1989)
+#
+#   compare_sim_seeds <- (1990:(1989+ndraws))
+#
+#   compare_sims <- lapply(compare_sim_seeds, resp_dat, dataset = dataset)
+#
+#   focal_isd <- simulate_isd_ts(focal_sim, isd_seed = 1989)
+#
+#   compare_isds <- lapply(compare_sims, simulate_isd_ts, isd_seed = 1989)
+#
+#   focal_sv <- calc_sv(focal_isd)
+#
+#   compare_svs <- lapply(compare_isds, calc_sv)
+#
+#   cors <- unlist(lapply(compare_svs, sim_cor, focal_sv = focal_sv))
+#
+#   real_isd <- simulate_isd_ts(dataset, isd_seed = 1989)
+#
+#   real_sv <- calc_sv(real_isd)
+#
+#   real_cor <- cor(real_sv$total_biomass, focal_sv$total_biomass)
+#
+#
+#   out <- data.frame(
+#     real_cor = real_cor,
+#     real_cor_percentile = percentile_score(real_cor, cors),
+#     real_cor_ses = ses(real_cor, cors),
+#     real_cor_diff = mean(cors) - real_cor,
+#     sim_cor_mean = mean(cors)
+#   ) %>%
+#     bind_cols(dataset$metadata$location) %>%
+#     mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
+#
+#   out
+# }
+#
+# sim_cor <- function(compare_sv, focal_sv) {
+#
+#   cor(focal_sv$total_biomass, compare_sv$total_biomass)
+#
+# }
 
 
-  focal_sim <- resp_dat(dataset, 1989)
-
-  compare_sim_seeds <- (1990:(1989+ndraws))
-
-  compare_sims <- lapply(compare_sim_seeds, resp_dat, dataset = dataset)
-
-  focal_isd <- simulate_isd_ts(focal_sim, isd_seed = 1989)
-
-  compare_isds <- lapply(compare_sims, simulate_isd_ts, isd_seed = 1989)
-
-  focal_sv <- calc_sv(focal_isd)
-
-  compare_svs <- lapply(compare_isds, calc_sv)
-
-  cors <- unlist(lapply(compare_svs, sim_cor, focal_sv = focal_sv))
-
-  real_isd <- simulate_isd_ts(dataset, isd_seed = 1989)
-
-  real_sv <- calc_sv(real_isd)
-
-  real_cor <- cor(real_sv$total_biomass, focal_sv$total_biomass)
 
 
-  out <- data.frame(
-    real_cor = real_cor,
-    real_cor_percentile = percentile_score(real_cor, cors),
-    real_cor_ses = ses(real_cor, cors),
-    real_cor_diff = mean(cors) - real_cor,
-    sim_cor_mean = mean(cors)
-  ) %>%
-    bind_cols(dataset$metadata$location) %>%
-    mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
 
-  out
-}
+#' Compare sub-community properties
+#'
+#' Compares the mean body size, ISDs, and species composition for the first to the last 5 years of the timeseries.
+#'
+#' @param dat a MATSS dataset
+#'
+#' @return
+#' @export
+#'
+#' @importFrom dissBBSsize simulate_isd_ts
+#' @importFrom dplyr filter left_join select
+#' @importFrom vegan vegdist
+compare_community_structure <- function(dat) {
 
-sim_cor <- function(compare_sv, focal_sv) {
+  dat_focal_years <-pull_focal_years(dat)
 
-  cor(focal_sv$total_biomass, compare_sv$total_biomass)
+  dat_null_mod <- relabund_null_model(dat_focal_years, resp_seed = 1989)
 
-}
+  dat_isd_actual <- dissBBSsize::simulate_isd_ts(dat_focal_years, isd_seed = 1989)
 
-fiveyr_compare <- function(dat) {
-  dat_sliced <-slice_dat(dat)
+  dat_isd_null <- dissBBSsize::simulate_isd_ts(dat_null_mod, isd_seed = 1989)
 
-  dat_resp <- resp_dat(dat_sliced, resp_seed = 1989)
 
-  dat_isd <- simulate_isd_ts(dat_sliced, isd_seed = 1989)
-
-  dat_resp_isd <- simulate_isd_ts(dat_resp, isd_seed = 1989)
-
-  years <- unique(dat_sliced$covariates$year)
+  # pull first and last 5 years
+  years <- unique(dat_focal_years$covariates$year)
 
   begin_years <- years[1:5]
   end_years <- years[(length(years) - 4):length(years)]
 
-  begin_isd_real <- filter(dat_isd$isd, year %in% begin_years)
-  end_isd_real <- filter(dat_isd$isd, year %in% end_years )
+  # pull isds (mass estimates for each individual) for begin and end time periods
+  begin_isd_real <- dplyr::filter(dat_isd_actual$isd, year %in% begin_years)
+  end_isd_real <- dplyr::filter(dat_isd_actual$isd, year %in% end_years )
 
+
+  # ISD overlap
+  # Get density smooths by fitting a Gaussian mixture model to the ISD, extracting the density smooth, and scaling so the area under the density smooth sums to 1
+  # Then combine into a df so we can compare begin to end
   begin_isd_gmm_real <- add_gmm(begin_isd_real)
   end_isd_gmm_real <- add_gmm(end_isd_real) %>%
-    rename(density_end = density)
+    dplyr::rename(density_end = density)
 
-  real_gmms <- left_join(begin_isd_gmm_real, end_isd_gmm_real)
+  real_gmms <- dplyr::left_join(begin_isd_gmm_real, end_isd_gmm_real)
+
+  # Calculate overlap metric between the two density smooths, and turnover as 1-overlap
 
   real_overlap <- real_gmms %>%
-    group_by_all() %>%
-    mutate(minDensity = min(density, density_end)) %>%
-    ungroup() %>%
-    summarize(overlap = sum(minDensity))
+    dplyr::group_by_all() %>%
+    dplyr::mutate(minDensity = min(density, density_end)) %>%
+    dplyr::ungroup() %>%
+    dplyr::summarize(overlap = sum(minDensity)) %>%
+    dplyr::mutate(turnover = 1 - overlap)
 
 
-  begin_isd_sim <- filter(dat_resp_isd$isd, year %in% begin_years)
-  end_isd_sim <- filter(dat_resp_isd$isd, year %in% end_years)
+  # Repeat the above for the null model
+  begin_isd_sim <- filter(dat_isd_null$isd, year %in% begin_years)
+  end_isd_sim <- filter(dat_isd_null$isd, year %in% end_years)
 
   begin_isd_gmm_sim <- add_gmm(begin_isd_sim)
   end_isd_gmm_sim <- add_gmm(end_isd_sim) %>%
@@ -369,13 +426,18 @@ fiveyr_compare <- function(dat) {
     group_by_all() %>%
     mutate(minDensity = min(density, density_end)) %>%
     ungroup() %>%
-    summarize(overlap = sum(minDensity))
+    summarize(overlap = sum(minDensity))%>%
+    dplyr::mutate(turnover = 1 - overlap)
 
+  # Calcualte mean mass in first and last 5 year time periods for real and null model
   real_begin_mean_mass <- mean(begin_isd_real$mass)
   real_end_mean_mass <- mean(end_isd_real$mass)
   sim_begin_mean_mass <- mean(begin_isd_sim$mass)
   sim_end_mean_mass <- mean(end_isd_sim$mass)
 
+
+  # For species compositional turnover (BCD)
+  # Create species abundance matrix for first 5/last 5 years and calculate BCD
 
   sp_matrix <- bind_rows(begin_isd_real, end_isd_real) %>%
     mutate(timeperiod = ifelse(year < 2000, "begin", 'end')) %>%
@@ -391,6 +453,8 @@ fiveyr_compare <- function(dat) {
   out <- data.frame(
     real_overlap = real_overlap$overlap[1],
     sim_overlap = sim_overlap$overlap[1],
+    real_turnover = real_overlap$turnover[1],
+    sim_turnover = sim_overlap$turnover[1],
     begin_years = toString(begin_years),
     end_years = toString(end_years),
     real_begin_mean_mass = real_begin_mean_mass,
@@ -401,23 +465,76 @@ fiveyr_compare <- function(dat) {
     sim_mass_ratio = sim_end_mean_mass / sim_begin_mean_mass,
     sp_turnover_bcd = real_bcd
   ) %>%
-    bind_cols(dat$metadata$location) %>%
-    mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
+    dplyr::bind_cols(dat$metadata$location) %>%
+    dplyr::mutate(matssname = paste0("bbs_rtrg_", route, "_", statenum))
 
   out
 }
 
-rsquared <- function(focal, compare) {
+# Not used
+#
+# rsquared <- function(focal, compare) {
+#
+#   if(log) {
+#
+#     focal <- log(focal)
+#     compare <- log(compare)
+#   }
+#
+#   focal_mean <- mean(focal)
+#
+#   numer <- sum((focal - compare) ^ 2)
+#   denom <- sum((focal - focal_mean) ^ 2)
+#   1 - (numer/denom)
+# }
 
-  if(log) {
+# GMM functions copied from rwar to avoid having rwar dependency
+#' Fit a GMM
+#'
+#' @param size_vect vector of sizes (logged or not)
+#' @param max_G number of Gaussians
+#'
+#' @return GMM fit with up to max_G Gaussians
+#' @export
+#' @importFrom mclust densityMclust
+fit_gmm <- function(size_vect, max_G = 15) {
+  library(mclust)
+  this_gmm <- mclust::densityMclust(size_vect, G = c(1:max_G) )
 
-    focal <- log(focal)
-    compare <- log(compare)
-  }
+  return(this_gmm)
 
-  focal_mean <- mean(focal)
-
-  numer <- sum((focal - compare) ^ 2)
-  denom <- sum((focal - focal_mean) ^ 2)
-  1 - (numer/denom)
 }
+
+#' Add GMM density to an ISD
+#'
+#' Fits to log of mass
+#'
+#' @param isd from BBSsize::simulate_isd_ts
+#' @param max_size default 15000 but changeable for mammals
+#' @param max_G max n gaussians
+#'
+#' @return dataframe with columns mass, density
+#' @export
+#'
+#' @importFrom dplyr mutate
+add_gmm <- function(isd, max_size = 15000, max_G = 15) {
+
+  isd <- isd %>%
+    dplyr::mutate(logmass = log(mass))
+
+  gmm <- fit_gmm(isd$logmass, max_G)
+
+
+  gmm_isd <- data.frame(logmass = seq(0, log(max_size), length.out = 1000))
+  gmm_isd$dens <- predict(gmm, newdata = gmm_isd$logmass)
+
+
+  isd_gmm <- data.frame(
+    mass = gmm_isd$logmass,
+    density = (gmm_isd$dens)/ sum(gmm_isd$dens)
+  )
+
+  return(isd_gmm)
+
+}
+

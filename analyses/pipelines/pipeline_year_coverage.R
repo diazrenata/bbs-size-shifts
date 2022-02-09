@@ -4,7 +4,6 @@
 #' The end result is a big dataframe with a row for every yearxroute that has that year sampled.
 
 library(dplyr)
-#library(rwar) # rwar is not actually used in this pipeline
 library(drake)
 library(MATSS)
 
