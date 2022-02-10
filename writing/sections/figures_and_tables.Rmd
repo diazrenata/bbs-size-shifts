@@ -20,38 +20,70 @@ library(ggplot2)
 theme_set(theme_bw())
 
 ## Set up the cache and config
-db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all_hasty_toy.sqlite"))
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all.sqlite"))
 cache <- storr::storr_dbi("datatable", "keystable", db)
 cache$del(key = "lock", namespace = "session")
 
 
 ```
 
+
+```{r load results and filter to desired temporal coverage}
+
+desired_routes <- read.csv(here::here("analyses", "supporting_data", "ninetypercent_coverage_1988_2018.csv"), stringsAsFactors = F)
+
+loadd(all_sims, cache=cache)
+
+all_sims <- all_sims %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_preds_b, cache=cache)
+all_preds_b <- all_preds_b %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_aics_b, cache=cache)
+all_aics_b <- all_aics_b %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_preds_e, cache=cache)
+all_preds_e <- all_preds_e %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_aics_e, cache=cache)
+all_aics_e <- all_aics_e %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_cs_compares, cache =cache)
+all_cs_compares <- all_cs_compares %>%
+  filter(matssname %in% desired_routes$matssname)
+
+```
+
+
 # Figure 1. Abundance-driven vs. observed change
 
 ```{r, fig.dim = c(5,3)}
 
-loadd(all_sims, cache=cache)
 rn <- "bbs_rtrg_28_4"
 dat <- readd(rn, character_only = T, cache=cache)
-source(here::here("analyses", "fxns", "hasty_fxns.R"))
+source(here::here("analyses", "fxns", "is_fxns.R"))
 
-dat_sliced <- slice_dat(dat)
-dat_resp <- resp_dat(dat_sliced)
+dat_obs <- pull_focal_years(dat)
+dat_null <- relabund_null_model(dat_obs)
 
-dat_isd <- simulate_isd_ts(dat_sliced, isd_seed = 1989)
-dat_resp_isd <- simulate_isd_ts(dat_resp, isd_seed = 1989)
+dat_isd_obs <- simulate_isd_ts(dat_obs, isd_seed = 1989)
+dat_isd_null <- simulate_isd_ts(dat_null, isd_seed = 1989)
 
-years <- unique(dat_sliced$covariates$year)
+years <- unique(dat_obs$covariates$year)
 
 begin_years <- years[1:5]
 end_years <- years[(length(years) - 4):length(years)]
 
-begin_isd_real <- filter(dat_isd$isd, year %in% begin_years)
-end_isd_real <- filter(dat_isd$isd, year %in% end_years )
+begin_isd_real <- filter(dat_isd_obs$isd, year %in% begin_years)
+end_isd_real <- filter(dat_isd_obs$isd, year %in% end_years )
 
-begin_isd_sim <- filter(dat_resp_isd$isd, year %in% begin_years)
-end_isd_sim <- filter(dat_resp_isd$isd, year %in% end_years)
+begin_isd_sim <- filter(dat_isd_null$isd, year %in% begin_years)
+end_isd_sim <- filter(dat_isd_null$isd, year %in% end_years)
 
 begin_isd_gmm_real <- add_gmm(begin_isd_real) %>%
   mutate(time = "begin")
@@ -59,22 +91,22 @@ end_isd_gmm_real <- add_gmm(end_isd_real) %>%
   mutate(time = "end")
 
 real_gmms <- bind_rows(begin_isd_gmm_real, end_isd_gmm_real) %>%
-  mutate(simtype = "Observed")
+  mutate(Dynamics = "Observed")
 
 begin_isd_gmm_sim <- add_gmm(begin_isd_sim) %>%
   mutate(time = "begin")
 end_isd_gmm_sim <- add_gmm(end_isd_sim)  %>%
   mutate(time = "end")
 sim_gmms <- bind_rows(begin_isd_gmm_sim, end_isd_gmm_sim) %>%
-  mutate(simtype = "Abundance driven")
+  mutate(Dynamics = "Abundance driven")
 
 both_gmms <- bind_rows(real_gmms, sim_gmms)
 ```
 
 ```{r}
-isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(mass), density, color = simtype, linetype = time)) + 
+isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(mass), density, color = Dynamics, linetype = time)) + 
   geom_line() + 
-  facet_wrap(vars(simtype), ncol = 2, scales = "free_y") + 
+  facet_wrap(vars(Dynamics), ncol = 2, scales = "free_y") + 
   theme(legend.position = "bottom") + 
   scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
   ylab("Probability density")+ 
@@ -97,10 +129,10 @@ dat_lm <- lm(total_biomass ~ timeperiod * source, data = dat_dynamics)
 
 dat_dynamics <- dat_dynamics %>%
   mutate(fitted = predict(dat_glm, type = "response")) %>%
-  mutate(simtype = ifelse(source == "sim", "Abundance driven", "Observed")) %>%
+  mutate(Dynamics = ifelse(source == "sim", "Abundance driven", "Observed")) %>%
   mutate(time = "begin") 
 
-timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = simtype)) +
+timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = Dynamics)) +
   geom_point() + 
   geom_line() + 
   geom_line(aes(y = fitted)) + 
@@ -124,99 +156,79 @@ two_plots
 
 #### Figure 1. 
 
-Illustration of abundance-driven (null model) dynamics as compared to observed dynamics (A), and the underlying dynamics of the ISD (B) for a sample route (`r dat_isd$metadata$location$routename`, `r dat_isd$metadata$location$regionname`). **A. Dynamics of total biomass.** The gold points show the true values for total biomass in each year, and the blue points show the values for total biomass simulated from a null model that incorporates change in total abundance, but assumes no change in the size structure, over time. The smooth lines show the predicted values from a Gamma (log-link) linear model of the form `total_biomass ~ year * simtype`. <!-- Using gaussian here because it is easier to interpret directly and compute r2. results are the same if you use Gamma --> For this route, change in the individual size distribution has decoupled the dynamics of biomass from those that would occur due only to changes in abundance. The slope for abundance-driven dynamics is significantly more negative than for the observed dynamics (interaction term p = 0.0013). **B. Underlying changes in the ISD.** The individual size distributions for the first 5 years (solid lines) and last 5 years (dashed lines) of the timeseries. The x-axis is body size (as mass in grams; note log scale) and the y-axis is probability density from a Gaussian mixture model fit to a vector of simulated individual masses for all individuals observed in the years in questions, standardized to sum to 1. For the abundance-driven (blue) scenario, individuals' species identities (which determine their body size estimates) are re-assigned at random weighte by each species' mean relative abundance throughout the timeseries, resulting in a consistent individual size distribution over time. For the observed (gold) scenario, individuals' body sizes are estimated based actual species abundances at each time step. For this route, species composition has shifted over time and produced different ISDs for the "begin" and "end" time periods. Specifically, the "end" ISD has peaks at larger body sizes (ca. 90g and 500g) not present in the "begin" ISD. This redistribution of density towards larger body sizes results in an overall increase in body size community wise, which partially offsets declines in total biomass from those expected given change in abundance alone. 
+Illustration of abundance-driven (null model) dynamics as compared to observed dynamics (A), and the underlying dynamics of the ISD (B) for a sample route (`r dat_isd_obs$metadata$location$routename`, `r dat_isd_obs$metadata$location$regionname`). **A. Dynamics of total biomass.** The gold points show the true values for total biomass in each year, and the blue points show the values for total biomass simulated from a null model that incorporates change in total abundance, but assumes no change in the size structure, over time. The smooth lines show the predicted values from a Gamma (log-link) linear model of the form `total_biomass ~ year * Dynamics`.  For this route, change in the individual size distribution has decoupled the dynamics of biomass from those that would occur due only to changes in abundance. The slope for abundance-driven dynamics is significantly more negative than for the observed dynamics (interaction term p = 0.0013). **B. Underlying changes in the ISD.** The individual size distributions for the first 5 years (solid lines) and last 5 years (dashed lines) of the timeseries. The x-axis is body size (as mass in grams; note log scale) and the y-axis is probability density from a Gaussian mixture model fit to a vector of simulated individual masses for all individuals observed in the years in questions, standardized to sum to 1. For the abundance-driven (blue) scenario, individuals' species identities (which determine their body size estimates) are re-assigned at random weighte by each species' mean relative abundance throughout the timeseries, resulting in a consistent individual size distribution over time. For the observed (gold) scenario, individuals' body sizes are estimated based actual species abundances at each time step. For this route, species composition has shifted over time and produced different ISDs for the "begin" and "end" time periods. Specifically, the "end" ISD has peaks at larger body sizes (ca. 90g and 500g) not present in the "begin" ISD. This redistribution of density towards larger body sizes results in an overall increase in body size community wide, which partially offsets declines in total biomass from those expected given change in abundance alone. 
 
 \newpage
 
+```{r process biomass results}
 
-```{r load and process biomass results}
+# Select the best-fitting model for each route using AICc (simplest model with an AICc score within two units of the minimum)
+# all_aics contains the AIC and AICc scores for every model fit to each route.
 
-loadd(all_preds, cache=cache)
-loadd(all_aics, cache=cache)
-
-winning_aics <- all_aics %>%
-  filter(model_family == "Gamma") %>%
+winning_aics <- all_aics_b %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
   group_by(matssname, model_family) %>%
-  mutate(minAICc = min(model_AICc)) %>%
-  mutate(deltaAICc = minAICc - model_AICc)  %>%
-  mutate(exp_deltas = exp(.5 * deltaAICc)) %>%
-  mutate(denom = sum(exp_deltas)) %>%
-  mutate(aicc_wt = exp_deltas/ denom) %>%
-  arrange(desc(aicc_wt)) %>%
-  mutate(rank =row_number()) %>%
-  ungroup() %>%
-  arrange(matssname, model_family, rank)
-
-delta_2 <- winning_aics %>% filter(deltaAICc > -2) %>%
-  filter(model_family == "Gamma") %>%
-  group_by(matssname, model_family) %>%
-  arrange(modelcomplexity) %>%
-  mutate(rank = row_number()) %>%
-  filter(rank == 1) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
   ungroup()
 
-winning_fits <- delta_2 %>%
-  left_join(all_preds) 
 
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits <- winning_aics %>%
+  left_join(all_preds_b) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
 slope_winning_fits <- winning_fits %>%
   filter(modelcomplexity > 1)
-# 
-# interaction_winning_fits <- winning_fits %>%
-#   filter(modelcomplexity > 2)
 
-
+# Pivot longer for plotting and summarizing
 biomass_slopes_long <- slope_winning_fits %>%
   select(matssname, ratio_sim, ratio_real) %>%
   tidyr::pivot_longer(-matssname, names_to = "source", values_to = "biomass_ratio") %>%
-  mutate(simtype = ifelse(source == "ratio_sim", "Abundance driven", "Observed"))
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Abundance driven", "Observed"))
 
 ```
 
 
-```{r load and process energy results}
+```{r process energy results}
 
-loadd(all_preds_energy, cache=cache)
-loadd(all_aics_energy, cache=cache)
 
-winning_aics_energy <- all_aics_energy %>%
-  filter(model_family == "Gamma") %>%
+winning_aics_energy <- all_aics_e %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
   group_by(matssname, model_family) %>%
-  mutate(minAICc = min(model_AICc)) %>%
-  mutate(deltaAICc = minAICc - model_AICc)  %>%
-  mutate(exp_deltas = exp(.5 * deltaAICc)) %>%
-  mutate(denom = sum(exp_deltas)) %>%
-  mutate(aicc_wt = exp_deltas/ denom) %>%
-  arrange(desc(aicc_wt)) %>%
-  mutate(rank =row_number()) %>%
-  ungroup() %>%
-  arrange(matssname, model_family, rank)
-
-delta_2_energy <- winning_aics_energy %>% filter(deltaAICc > -2) %>%
-  filter(model_family == "Gamma") %>%
-  group_by(matssname, model_family) %>%
-  arrange(modelcomplexity) %>%
-  mutate(rank = row_number()) %>%
-  filter(rank == 1) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
   ungroup()
 
 
-winning_fits_energy <- delta_2_energy %>%
-  left_join(all_preds_energy)
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits_energy <- winning_aics_energy %>%
+  left_join(all_preds_e) 
 
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
 slope_winning_fits_energy <- winning_fits_energy %>%
   filter(modelcomplexity > 1)
-# 
-# interaction_winning_fits_energy <- winning_fits_energy %>%
-#   filter(modelcomplexity > 2)
 
-
+# Pivot longer for plotting and summarizing
 energy_slopes_long <- slope_winning_fits_energy %>%
   select(matssname, ratio_sim, ratio_real) %>%
   tidyr::pivot_longer(-matssname, names_to = "source", values_to = "energy_ratio") %>%
-  mutate(simtype = ifelse(source == "ratio_sim", "Abundance driven", "Observed"))
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Abundance driven", "Observed"))
 
 
-
+# Combine energy and biomass results into one dataframe
 winning_fits_both <- winning_fits %>%
   mutate(currency = "biomass") %>%
   bind_rows(mutate(winning_fits_energy, currency = "energy"))
@@ -231,11 +243,11 @@ winning_fits_both <- winning_fits %>%
 
 ```{r, fig.dim = c(4,4)}
 
-biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
+biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color = Dynamics, fill = Dynamics)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(Dynamics), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
   theme(legend.position = "none") + ggtitle("Total biomass") + xlab("")
 
 
-energy_slope_histogram <- ggplot(energy_slopes_long, aes(energy_ratio, color = simtype, fill = simtype)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(simtype), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
+energy_slope_histogram <- ggplot(energy_slopes_long, aes(energy_ratio, color = Dynamics, fill = Dynamics)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(Dynamics), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
   theme(legend.position = "bottom") + ggtitle("Total metabolic flux") + xlab("Ratio of last fitted value to first fitted value")
 
 slope_histograms <- multi_panel_figure(columns = 1, height = c(1.6, 2), unit = "in") %>%
@@ -284,7 +296,7 @@ model_outcomes_table_pretty
 ```
 #### Table 1. Selected models.
 
-Table of the number and proportion of routes whose dynamics for total biomass and total energy use are best-fit by: a model with no temporal trend (intercept-only model, `response ~ 1`); a model with a temporal trend, but no difference in trend between observed and abundance-driven dynamics (`response ~ timeperiod`); or a model with decoupled temporal trends for observed and abundance-driven dynamics (`response ~ timeperiod * source`). 
+Table of the number and proportion of routes whose dynamics for total biomass and total energy use are best-fit by: a model with no temporal trend (intercept-only model, `response ~ 1`); a model with a temporal trend, but no difference in trend between observed and abundance-driven dynamics (`response ~ timeperiod`); or a model with decoupled temporal trends for observed and abundance-driven dynamics (`response ~ timeperiod * dynamics`, where `dynamics` is either observed or abundance-driven/null model). 
 
 For 31-32% of routes, models with trends do not outperform simple intercept-only models. For the remaining routes, in most instances, the dynamics of biomass and energy use exhibit a temporal trend, but with no detectable difference in the temporal trends for abundance-driven and observed dynamics. However, for a substantial minority of routes (20% overall for biomass, or 30% of routes with a temporal trend; 7% overall for energy use, or 10% of routes with a temporal trend), there is a detectable deviation between the trends expected due only to changes in abundance and the observed dynamics. 
 
@@ -330,7 +342,6 @@ Restricted to the routes exhibiting temporal trends in total biomass and total m
 
 Trends in abundance-driven dynamics are dominated by *declines* (67% of routes for total biomass, and 70% of routes for total energy). Observed dynamics for biomass differ qualitatively from the abundance-driven dynamics; observed trends in biomass are evenly divided between increases and decreases (49% increasing). Observed trends in energy use more closely mirror abundance-driven trends (65% declines).
 
-I think Table 2 can be removed/folded into the legend of Figure 2.
 
 \newpage
 
@@ -338,7 +349,7 @@ I think Table 2 can be removed/folded into the legend of Figure 2.
 
 ```{r}
 
-interaction_all_fits <- all_preds %>% 
+interaction_all_fits <- all_preds_b %>% 
   # get just the change ratios from the interaction models - regardless of whether the interaction model is the best-fitting model. this is because we want an estimate of the slope, we'll color by model fit in a minute
   group_by_all() %>% 
   filter(grepl( "* source",model_formula), model_family == "Gamma") %>%
@@ -351,7 +362,7 @@ interaction_all_fits <- all_preds %>%
   mutate(currency = "Biomass")
 
 
-interaction_all_fits_energy <- all_preds_energy  %>% 
+interaction_all_fits_energy <- all_preds_e  %>% 
   # get just the change ratios from the interaction models - regardless of whether the interaction model is the best-fitting model. this is because we want an estimate of the slope, we'll color by model fit in a minute
   group_by_all() %>% 
   filter(grepl( "* source",model_formula), model_family == "Gamma") %>%
@@ -394,21 +405,20 @@ decoupling_plot
 
 #### Figure 3. Decoupling between abundance-driven and observed trends.
 
-Observed change (ratio of last fitted value to first fitted value, y-axis) in total biomass (left) and total metabolic flux (right) compared to the change expected only due to changes in total abundance (ratio of last fitted value to first fitted value, x-axis). Values greater than 1 (dashed horizontal and vertical lines) mark positive (increasing) trends, while values less than 1 are negative trends. Each point marks the fitted values from a Gamma log-link generalized linear model of the form `response ~ year * source` for a given route. This estimates separate long-term slopes for observed and abundance-driven dynamics. Points are colored corresponding to the best-fitting model (intercept-only, or "no trend"; a slope for year but no difference in slopes between observed and abundance-driven dynamics, or "coupled trend", and separate slopes for observed and abundance-driven dynamics, "decoupled trends") for each route. Deviations from the 1:1 line (solid black line) reflect changes in the community size structure that modulate the relationship between total abundance and total biomass or energy use. 
+Observed change (ratio of last fitted value to first fitted value, y-axis) in total biomass (left) and total metabolic flux (right) compared to the change expected only due to changes in total abundance (ratio of last fitted value to first fitted value, x-axis). Values greater than 1 (dashed horizontal and vertical lines) mark positive (increasing) trends, while values less than 1 are negative trends. Each point marks the fitted values from a Gamma log-link generalized linear model of the form `response ~ year * dynamics` for a given route. This estimates separate long-term slopes for observed and abundance-driven dynamics. Points are colored corresponding to the best-fitting model (intercept-only, or "no trend"; a slope for year but no difference in slopes between observed and abundance-driven dynamics, or "coupled trend", and separate slopes for observed and abundance-driven dynamics, "decoupled trends") for each route. Deviations from the 1:1 line (solid black line) reflect changes in the community size structure that modulate the relationship between total abundance and total biomass or energy use. 
 
-Changes in total biomass and total energy use generally track changes driven by fluctuations in total abundance, with appreciable scatter around the 1:1 line. When this translates into a statistically detectable decoupling between observed and abundance-driven dynamics ("Decoupled trends"), this is usually in the form of abundance-driven change being more negative (a steeper decline or a smaller increase) than observed change in biomass or energy use (a less steep decline or larger increase), and occurs more strongly and frequently for biomass than for metabolic flux.
+Changes in total biomass and total energy use generally track changes driven by fluctuations in total abundance, with appreciable scatter around the 1:1 line. When this translates into a statistically detectable decoupling between observed and abundance-driven dynamics ("Decoupled trends"), this is usually in the form of abundance-driven change being more negative (a steeper decline or a smaller increase) than observed change in biomass or energy use (a less steep decline or larger increase), resulting in points falling above and to the left of the 1:1 line. This occurs more strongly and frequently for biomass than for metabolic flux.
 
 
  \newpage
  
-# Figure 4. How community change to decoupling
+# Figure 4. How change in community structure translates into decoupling
 
 ```{r}
 
-loadd(all_isd_compares, cache =cache)
 
 winning_fits <- winning_fits %>% 
-  left_join(all_isd_compares) %>%
+  left_join(all_cs_compares) %>%
   mutate(`Best fitting model` = ifelse(modelcomplexity == 1, "No trend", ifelse(modelcomplexity == 2, "Coupled trend", "Decoupled trends")))
 
 

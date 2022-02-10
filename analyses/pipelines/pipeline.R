@@ -85,5 +85,5 @@ system.time(make(all,
 
 
 #Run the pipeline on multiple local cores
-#system.time(make(all, cache = cache,  verbose = 1, memory_strategy = "autoclean", lock_envir = F, jobs = 3, parallelism = "clustermq"))
+system.time(make(all, cache = cache,  verbose = 1, memory_strategy = "autoclean", lock_envir = F, jobs = 3, parallelism = "clustermq"))
 
