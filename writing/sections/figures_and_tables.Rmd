@@ -512,9 +512,7 @@ Routes that exhibit decoupling between observed and abundance-driven changes in 
 
 ### Mean mass
 
-Linear model fit to `abs(log(end_mean_mass / begin_mean_mass))`:
-
-First, anova comparing a model fit as `abs_log_ratio ~ model_type` to an intercept-only model:
+#### Table 3. ANOVA comparing model type to intercept-only model for absolute log ratio of mean mass
 
 ```{r, results = T}
 
@@ -527,23 +525,30 @@ anova(mean_mass_lm, mean_mass_lm_intercept)
 ```
 
 
-The fit to model type is superior to the intercept-only model, so evaluating the estimated values and contrasts:
+ANOVA comparing the models `abs_log_ratio_mean_mass ~ best fitting model type` and `abs_log_ratio_mean_mass ~ 1`. The fit incorporating model type is superior to the intercept-only model (p < 0.0001).
+
+#### Table 4. Model estimates for absolute log ratio of mean mass for routes best-described by different dynamics.
 
 ```{r, results = T}
 mean_mass_lm_emmeans <- emmeans::emmeans(mean_mass_lm, specs = ~ categorical_fit)
 
 as.data.frame(mean_mass_lm_emmeans)
+```
 
+Estimates (calculated using `emmeans` [@lenth2021]) for the mean absolute log ratio of mean mass for routes whose dynamics for biomass best-described by different model types. Routes with decoupled long-term trends between biomass and abundance-driven dynamics have higher absolute log ratios (mean .56, 95% credible interval .53-.58) than routes with covarying trends in biomass and abundance (mean of .2; 95% interval .18-.22) or no detectable temporal trend (mean of .22; .2-.24). 
+
+#### Table 5. Contrasts for absolute log ratio of mean mass.
+
+```{r, results = T}
 as.data.frame(pairs(mean_mass_lm_emmeans))
 ```
 
-
-Decoupled trends models have higher absolute log ratios than no trend or coupled trend models. 
+Contrasts for the above comparisons. There is a significant contrast between routes with decoupled trends and the other two types of dynamics (both contrasts, p < 0.001), but not between "no trend" and "coupled trend" routes (contrast p = .31).
 
 
 ### ISD turnover
 
-Comparing a binomial GLM (ISD overlap is bounded 0-1) fit to model type to an intercept-only model:
+#### Table 6. ANOVA for turnover in the ISD
 
 
 ```{r, results = T}
@@ -556,14 +561,9 @@ anova(overlap_glm, overlap_glm_intercept, test = "Chi")
 
 ```
 
+### Species compositional turnover
 
-The model fit model is not superior to the intercept only model (p = .91).
-
-
-### Bray-Curtis dissimilarity
-
-
-Comparing a binomial GLM fit to model type to an intercept-only model:
+#### Table 7. ANOVA for Bray-Curtis dissimilarity
 
 
 ```{r, results = T}
@@ -577,7 +577,7 @@ anova(bcd_glm, bcd_glm_intercept, test = "Chi")
 ```
 
 
-The model fit model is not superior to the intercept only model (p = .37).
+ANOVA comparing a binomial GLM of the form `bray curtis dissimilarity ~ best fitting model type` to an intercept-only model. The `best fitting model type` model is not superior to the intercept only model (p = .37).
 
 
 
