@@ -1,12 +1,15 @@
 ---
+title: Appendix S2
+author: Statistical comparisons of distributions in Figure 4.
 output:
   word_document:
     reference_docx: ecology_doc.docx
     df_print: kable
-  # html_document:
+    toc: true
+  # github_document:
   #   df_print: kable
-  pdf_document: 
-    df_print: kable
+  # pdf_document: 
+  #   df_print: kable
 csl: ecology.csl
 bibliography: refs.bib
 ---
@@ -60,7 +63,7 @@ all_cs_compares <- all_cs_compares %>%
 ```
 
 
-# Figure 1. Abundance-driven vs. observed change
+<!-- # Figure 1. Abundance-driven vs. observed change -->
 
 ```{r, fig.dim = c(5,3)}
 
@@ -147,19 +150,18 @@ timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = D
 #timeseries_plot
 ```
 
-```{r, fig.dim = c(6,4.25)}
-two_plots <- multi_panel_figure(columns = 1 ,height = c(2,2.25), unit = "in") %>%
-  fill_panel(timeseries_plot) %>%
-  fill_panel(isd_plots)
+<!-- ```{r, fig.dim = c(8,6)} -->
+<!-- two_plots <- multi_panel_figure(columns = 1 ,height = c(2,2.25), unit = "in") %>% -->
+<!--   fill_panel(timeseries_plot) %>% -->
+<!--   fill_panel(isd_plots) -->
 
-two_plots
-```
+<!-- two_plots -->
+<!-- ``` -->
 
-#### Figure 1. 
+<!-- #### Figure 1.  -->
 
-Illustration of abundance-driven (null model) dynamics as compared to observed dynamics (A), and the underlying dynamics of the ISD (B) for a sample route (`r dat_isd_obs$metadata$location$routename`, `r dat_isd_obs$metadata$location$regionname`). **A. Dynamics of total biomass.** The gold points show the true values for total biomass in each year, and the blue points show the values for total biomass simulated from a null model that incorporates change in total abundance, but assumes no change in the size structure, over time. The smooth lines show the predicted values from a Gamma (log-link) linear model of the form `total_biomass ~ year * Dynamics`.  For this route, change in the individual size distribution has decoupled the dynamics of biomass from those that would occur due only to changes in abundance. The slope for abundance-driven dynamics is significantly more negative than for the observed dynamics (interaction term p = 0.0013). **B. Underlying changes in the ISD.** The individual size distributions for the first 5 years (solid lines) and last 5 years (dashed lines) of the timeseries. The x-axis is body size (as mass in grams; note log scale) and the y-axis is probability density from a Gaussian mixture model fit to a vector of simulated individual masses for all individuals observed in the years in questions, standardized to sum to 1. For the abundance-driven (blue) scenario, individuals' species identities (which determine their body size estimates) are re-assigned at random weighte by each species' mean relative abundance throughout the timeseries, resulting in a consistent individual size distribution over time. For the observed (gold) scenario, individuals' body sizes are estimated based actual species abundances at each time step. For this route, species composition has shifted over time and produced different ISDs for the "begin" and "end" time periods. Specifically, the "end" ISD has peaks at larger body sizes (ca. 90g and 500g) not present in the "begin" ISD. This redistribution of density towards larger body sizes results in an overall increase in body size community wide, which partially offsets declines in total biomass from those expected given change in abundance alone. 
+<!-- Illustration of abundance-driven (null model) dynamics as compared to observed dynamics (A), and the underlying dynamics of the ISD (B) for a sample route (`r dat_isd_obs$metadata$location$routename`, `r dat_isd_obs$metadata$location$regionname`). **A. Dynamics of total biomass.** The gold points show the true values for total biomass in each year, and the blue points show the values for total biomass simulated from a null model that incorporates change in total abundance, but assumes no change in the size structure, over time. The smooth lines show the predicted values from a Gamma (log-link) linear model of the form `total_biomass ~ year * Dynamics`.  For this route, change in the individual size distribution has decoupled the dynamics of biomass from those that would occur due only to changes in abundance. The slope for abundance-driven dynamics is significantly more negative than for the observed dynamics (interaction term p = 0.0013). **B. Underlying changes in the ISD.** The individual size distributions for the first 5 years (solid lines) and last 5 years (dashed lines) of the timeseries. The x-axis is body size (as mass in grams; note log scale) and the y-axis is probability density from a Gaussian mixture model fit to a vector of simulated individual masses for all individuals observed in the years in questions, standardized to sum to 1. For the abundance-driven (blue) scenario, individuals' species identities (which determine their body size estimates) are re-assigned at random weighte by each species' mean relative abundance throughout the timeseries, resulting in a consistent individual size distribution over time. For the observed (gold) scenario, individuals' body sizes are estimated based actual species abundances at each time step. For this route, species composition has shifted over time and produced different ISDs for the "begin" and "end" time periods. Specifically, the "end" ISD has peaks at larger body sizes (ca. 90g and 500g) not present in the "begin" ISD. This redistribution of density towards larger body sizes results in an overall increase in body size community wide, which partially offsets declines in total biomass from those expected given change in abundance alone.  -->
 
-\newpage
 
 ```{r process biomass results}
 
@@ -240,38 +242,37 @@ winning_fits_both <- winning_fits %>%
 
 \newpage
 
-# Figure 2. Directions and magnitudes of change.
+<!-- # Figure 2. Directions and magnitudes of change. -->
 
-```{r, fig.dim = c(4,4)}
+```{r, fig.dim = c(6,6), results = F}
 
 biomass_slope_histogram <- ggplot(biomass_slopes_long, aes(biomass_ratio, color = Dynamics, fill = Dynamics)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(Dynamics), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
   theme(legend.position = "none") + ggtitle("Total biomass") + xlab("")
 
 
 energy_slope_histogram <- ggplot(energy_slopes_long, aes(energy_ratio, color = Dynamics, fill = Dynamics)) + geom_histogram(boundary = 1) + scale_x_log10() + geom_vline(xintercept = 1) + facet_wrap(vars(Dynamics), scales = "free_y") + scale_color_viridis_d(option = "cividis", begin = .2, end = .8) + scale_fill_viridis_d(option = "cividis", begin = .2, end = .8) +
-  theme(legend.position = "bottom") + ggtitle("Total metabolic flux") + xlab("Ratio of last fitted value to first fitted value")
+  theme(legend.position = "bottom") + ggtitle("Total energy use") + xlab("Ratio of last fitted value to first fitted value")
 
 slope_histograms <- multi_panel_figure(columns = 1, height = c(1.6, 2), unit = "in") %>%
   fill_panel(biomass_slope_histogram) %>%
   fill_panel(energy_slope_histogram)
-slope_histograms
+#slope_histograms
 ```
 
-#### Figure 2. Long-term trends in total biomass and energy use
+<!-- #### Figure 2. Long-term trends in total biomass and energy use -->
 
-Histograms showing the direction and magnitude of change over time for the abundance-driven (left) and observed (right) changes in biomass (A) and energy use (B), for communities with a significant slope and/or interaction term (for biomass, 500/739 routes; for energy use, 509/739 routes). Change is summarized as the ratio of the fitted value for the last year in the time series to the fitted value for the first year in the timeseries from the best-fitting model for that community. Values greater than 1 (vertical black line) indicate increases in total energy or biomass over time, and less than 1 indicate decreases. The abundance-driven dynamics (left) reflect the trends fit for the null model, while the observed dynamics (right) reflect trends incorporating both change in total abundance and change in the size structure over time. For communities with no significant interaction term in the best-fitting model, the "abundance-driven" and "observed" ratios will be the same; interaction terms will result in different ratios for "abundance-driven" and "observed" dynamics. 
+<!-- Histograms showing the direction and magnitude of change over time for the abundance-driven (left) and observed (right) changes in biomass (A) and energy use (B), for communities with a significant slope and/or interaction term (for biomass, 500/739 routes; for energy use, 509/739 routes). Change is summarized as the ratio of the fitted value for the last year in the time series to the fitted value for the first year in the timeseries from the best-fitting model for that community. Values greater than 1 (vertical black line) indicate increases in total energy or biomass over time, and less than 1 indicate decreases. The abundance-driven dynamics (left) reflect the trends fit for the null model, while the observed dynamics (right) reflect trends incorporating both change in total abundance and change in the size structure over time. For communities with no significant interaction term in the best-fitting model, the "abundance-driven" and "observed" ratios will be the same; interaction terms will result in different ratios for "abundance-driven" and "observed" dynamics.  -->
 
-Among routes with temporal trends, there are qualitatively different continental-wide patterns in abundance-driven and observed dynamics for total biomass and total metabolic flux. 70% of trends in abundance-driven dynamics for energy use are decreasing, and 67% for biomass. However, for biomass, observed dynamics are balanced evenly between increases (49% of routes) and decreases (51%) - indicating that changes in the size structure produce qualitatively different long-term trends for biomass than would be expected given abundance changes alone. However, trends for energy use (which scales nonlinearly with biomass) are dominated by decreases (35% of routes), more closely mirroring the trends expected given changes in abundance. 
+<!-- Among routes with temporal trends, there are qualitatively different continental-wide patterns in abundance-driven and observed dynamics for total biomass and total energy use. 70% of trends in abundance-driven dynamics for energy use are decreasing, and 67% for biomass. However, for biomass, observed dynamics are balanced evenly between increases (49% of routes) and decreases (51%) - indicating that changes in the size structure produce qualitatively different long-term trends for biomass than would be expected given abundance changes alone. However, trends for energy use (which scales nonlinearly with biomass) are dominated by decreases (35% of routes), more closely mirroring the trends expected given changes in abundance.  -->
 
-\newpage
+<!-- \newpage -->
 
-# Tables: Model outcomes
+<!-- # Tables: Model outcomes -->
 
-<!-- and directions of trends  -->
 
-### Table 1.
+<!-- ### Table 1. -->
 
-```{r model outcomes table, results = T}
+```{r model outcomes table, results = F}
 
 model_outcomes_table <- winning_fits_both %>%
   select(matssname, model_family, model_formula, currency)  %>%
@@ -283,7 +284,7 @@ model_outcomes_table <- winning_fits_both %>%
   mutate(prop = n / nmods) 
 
 model_outcomes_table_pretty <- model_outcomes_table %>%
-  mutate(currency = ifelse(currency == "biomass", "Total biomass", "Total metabolic flux")) %>%
+  mutate(currency = ifelse(currency == "biomass", "Total biomass", "Total energy use")) %>%
   mutate(prop_rounded = round(prop, digits = 2),
          form_pretty = ifelse(grepl("1", model_formula), "Intercept-only", ifelse(grepl("source", model_formula), "Decoupled trend", "Trend, not decoupled"))) %>%
   select(currency, form_pretty, n, prop_rounded) %>%
@@ -295,16 +296,16 @@ model_outcomes_table_pretty <- model_outcomes_table %>%
 model_outcomes_table_pretty
 
 ```
-#### Table 1. Selected models.
+<!-- #### Table 1. Selected models. -->
 
-Table of the number and proportion of routes whose dynamics for total biomass and total energy use are best-fit by: a model with no temporal trend (intercept-only model, `response ~ 1`); a model with a temporal trend, but no difference in trend between observed and abundance-driven dynamics (`response ~ timeperiod`); or a model with decoupled temporal trends for observed and abundance-driven dynamics (`response ~ timeperiod * dynamics`, where `dynamics` is either observed or abundance-driven/null model). 
+<!-- Table of the number and proportion of routes whose dynamics for total biomass and total energy use are best-fit by: a model with no temporal trend (intercept-only model, `response ~ 1`); a model with a temporal trend, but no difference in trend between observed and abundance-driven dynamics (`response ~ timeperiod`); or a model with decoupled temporal trends for observed and abundance-driven dynamics (`response ~ timeperiod * dynamics`, where `dynamics` is either observed or abundance-driven/null model).  -->
 
-For 31-32% of routes, models with trends do not outperform simple intercept-only models. For the remaining routes, in most instances, the dynamics of biomass and energy use exhibit a temporal trend, but with no detectable difference in the temporal trends for abundance-driven and observed dynamics. However, for a substantial minority of routes (20% overall for biomass, or 30% of routes with a temporal trend; 7% overall for energy use, or 10% of routes with a temporal trend), there is a detectable deviation between the trends expected due only to changes in abundance and the observed dynamics. 
+<!-- For 31-32% of routes, models with trends do not outperform simple intercept-only models. For the remaining routes, in most instances, the dynamics of biomass and energy use exhibit a temporal trend, but with no detectable difference in the temporal trends for abundance-driven and observed dynamics. However, for a substantial minority of routes (20% overall for biomass, or 30% of routes with a temporal trend; 7% overall for energy use, or 10% of routes with a temporal trend), there is a detectable deviation between the trends expected due only to changes in abundance and the observed dynamics.  -->
 
-### Table 2.
+<!-- ### Table 2. -->
 
 
-```{r}
+```{r, results =F}
 
 slope_winning_fits <- filter(winning_fits_both, modelcomplexity > 1) %>%
   mutate(abundance_driven_increase = ratio_sim > 1,
@@ -319,7 +320,7 @@ slope_winning_fits_summary <- slope_winning_fits %>%
             prop_observed_increase = round(mean(observed_increase), digits = 2))
 
 slope_winning_fits_pretty <- slope_winning_fits_summary %>%
-  mutate(currency = ifelse(currency == "biomass", "Total biomass", "Total metabolic flux")) %>%
+  mutate(currency = ifelse(currency == "biomass", "Total biomass", "Total energy use")) %>%
   select(currency,
          # n_abundance_increase,
          # n_observed_increase,
@@ -337,16 +338,16 @@ slope_winning_fits_pretty
 
 ```
 
-#### Table 2. Direction of temporal trends in abundance-driven and observed dynamics.
+<!-- #### Table 2. Direction of temporal trends in abundance-driven and observed dynamics. -->
 
-Restricted to the routes exhibiting temporal trends in total biomass and total metabolic flux, the proportion of trends that are increasing (specifically, the ratio of the last fitted value to the first fitted value > 1) for abundance-driven and observed dynamics. Trends that are not increasing are decreasing.
+<!-- Restricted to the routes exhibiting temporal trends in total biomass and total energy use, the proportion of trends that are increasing (specifically, the ratio of the last fitted value to the first fitted value > 1) for abundance-driven and observed dynamics. Trends that are not increasing are decreasing. -->
 
-Trends in abundance-driven dynamics are dominated by *declines* (67% of routes for total biomass, and 70% of routes for total energy). Observed dynamics for biomass differ qualitatively from the abundance-driven dynamics; observed trends in biomass are evenly divided between increases and decreases (49% increasing). Observed trends in energy use more closely mirror abundance-driven trends (65% declines).
+<!-- Trends in abundance-driven dynamics are dominated by *declines* (67% of routes for total biomass, and 70% of routes for total energy). Observed dynamics for biomass differ qualitatively from the abundance-driven dynamics; observed trends in biomass are evenly divided between increases and decreases (49% increasing). Observed trends in energy use more closely mirror abundance-driven trends (65% declines). -->
 
 
-\newpage
+<!-- \newpage -->
 
-# Figure 3. Visualizing decoupling
+<!-- # Figure 3. Visualizing decoupling -->
 
 ```{r}
 
@@ -373,7 +374,7 @@ interaction_all_fits_energy <- all_preds_e  %>%
   left_join(select(winning_fits_energy, matssname, model_formula, modelcomplexity) %>%
               rename(winning_formula = model_formula)) %>%
   select(winning_formula, ratio_sim, ratio_real, matssname, modelcomplexity) %>%
-  mutate(currency = "Metabolic flux")
+  mutate(currency = "Energy use")
 
 
 all_interaction <- bind_rows(interaction_all_fits, interaction_all_fits_energy) %>%
@@ -383,7 +384,7 @@ all_interaction <- bind_rows(interaction_all_fits, interaction_all_fits_energy) 
 ```
 
 
-```{r, fig.dim= c(5.5,3)}
+```{r, fig.dim= c(5.5,4), results =F}
 
 decoupling_plot <- ggplot(all_interaction, aes(ratio_sim, ratio_real, color = Syndrome)) + 
   geom_point(alpha = .5) + 
@@ -400,20 +401,20 @@ decoupling_plot <- ggplot(all_interaction, aes(ratio_sim, ratio_real, color = Sy
   facet_wrap(vars(currency), ncol = 2)
 
 
-decoupling_plot
+#decoupling_plot
 ```
 
 
-#### Figure 3. Decoupling between abundance-driven and observed trends.
+<!-- #### Figure 3. Decoupling between abundance-driven and observed trends. -->
 
-Observed change (ratio of last fitted value to first fitted value, y-axis) in total biomass (left) and total metabolic flux (right) compared to the change expected only due to changes in total abundance (ratio of last fitted value to first fitted value, x-axis). Values greater than 1 (dashed horizontal and vertical lines) mark positive (increasing) trends, while values less than 1 are negative trends. Each point marks the fitted values from a Gamma log-link generalized linear model of the form `response ~ year * dynamics` for a given route. This estimates separate long-term slopes for observed and abundance-driven dynamics. Points are colored corresponding to the best-fitting model (intercept-only, or "no trend"; a slope for year but no difference in slopes between observed and abundance-driven dynamics, or "coupled trend", and separate slopes for observed and abundance-driven dynamics, "decoupled trends") for each route. Deviations from the 1:1 line (solid black line) reflect changes in the community size structure that modulate the relationship between total abundance and total biomass or energy use. 
+<!-- Observed change (ratio of last fitted value to first fitted value, y-axis) in total biomass (left) and total energy use (right) compared to the change expected only due to changes in total abundance (ratio of last fitted value to first fitted value, x-axis). Values greater than 1 (dashed horizontal and vertical lines) mark positive (increasing) trends, while values less than 1 are negative trends. Each point marks the fitted values from a Gamma log-link generalized linear model of the form `response ~ year * dynamics` for a given route. This estimates separate long-term slopes for observed and abundance-driven dynamics. Points are colored corresponding to the best-fitting model (intercept-only, or "no trend"; a slope for year but no difference in slopes between observed and abundance-driven dynamics, or "coupled trend", and separate slopes for observed and abundance-driven dynamics, "decoupled trends") for each route. Deviations from the 1:1 line (solid black line) reflect changes in the community size structure that modulate the relationship between total abundance and total biomass or energy use.  -->
 
-Changes in total biomass and total energy use generally track changes driven by fluctuations in total abundance, with appreciable scatter around the 1:1 line. When this translates into a statistically detectable decoupling between observed and abundance-driven dynamics ("Decoupled trends"), this is usually in the form of abundance-driven change being more negative (a steeper decline or a smaller increase) than observed change in biomass or energy use (a less steep decline or larger increase), resulting in points falling above and to the left of the 1:1 line. This occurs more strongly and frequently for biomass than for metabolic flux.
+<!-- Changes in total biomass and total energy use generally track changes driven by fluctuations in total abundance, with appreciable scatter around the 1:1 line. When this translates into a statistically detectable decoupling between observed and abundance-driven dynamics ("Decoupled trends"), this is usually in the form of abundance-driven change being more negative (a steeper decline or a smaller increase) than observed change in biomass or energy use (a less steep decline or larger increase), resulting in points falling above and to the left of the 1:1 line. This occurs more strongly and frequently for biomass than for energy use. -->
 
 
- \newpage
- 
-# Figure 4. How change in community structure translates into decoupling
+<!--  \newpage -->
+
+<!-- # Figure 4. How change in community structure translates into decoupling -->
 
 ```{r}
 
@@ -459,7 +460,7 @@ isd_mean_change_plot <-  ggplot(winning_fits, aes(abs_log_ratio, color = Syndrom
 
 ```
 
-```{r}
+```{r, results = F}
 
 isd_overlap_plot <- ggplot(winning_fits, aes(isd_turnover,color = Syndrome, fill= Syndrome)) + 
   geom_histogram() + 
@@ -491,29 +492,29 @@ bcd_plot <- ggplot(winning_fits, aes(sp_turnover_bcd,color = Syndrome, fill= Syn
 # glm_cor <- cor(predict(isd_glm, type = "response"), isd_glm$model[,1]) ^ 2
 ```
 
-```{r, fig.dim = c(6, 3.5)}
+```{r, fig.dim = c(8,5), results= F}
 
 isd_change_plots <- multi_panel_figure(columns = 3, rows = 1) %>%
   fill_panel(isd_mean_change_plot) %>%
   fill_panel(isd_overlap_plot) %>%
   fill_panel(bcd_plot)
-isd_change_plots
+#isd_change_plots
 ```
 
 
-#### Figure 4. Histograms of change in community structure for routes showing no trends, coupled, and decoupled trends in abundance-driven and observed dynamics.
+<!-- #### Figure 4. Histograms of change in community structure for routes showing no trends, coupled, and decoupled trends in abundance-driven and observed dynamics. -->
 
-Histograms of (A) change in mean body size from the first to the last five years of monitoring, (B) overall change in the size structure, and (C) change in species composition for routes whose dynamics for  total biomass were best-described using no temporal trend (bottom row; intercept-only model), separate trends for observed and abundance-driven dynamics (middle row), or the same trend for observed and abundance-driven dynamics (top row). Change in mean body size (A) is calculated as the ratio of the mean body size of all individuals observed in the last 5 years of the timeseries relative to the mean body size of all individuals observed in the first 5 years. Overall change in the ISD (B) is calculated as the degree of turnover between the ISDs for the first and last five years of the timeseries (see text). Change in species composition (C) is Bray-Curtis dissimilarity comparing species composition in the first five years to the last five years. 
+<!-- Histograms of (A) change in mean body size from the first to the last five years of monitoring, (B) overall change in the size structure, and (C) change in species composition for routes whose dynamics for  total biomass were best-described using no temporal trend (bottom row; intercept-only model), separate trends for observed and abundance-driven dynamics (middle row), or the same trend for observed and abundance-driven dynamics (top row). Change in mean body size (A) is calculated as the ratio of the mean body size of all individuals observed in the last 5 years of the timeseries relative to the mean body size of all individuals observed in the first 5 years. Overall change in the ISD (B) is calculated as the degree of turnover between the ISDs for the first and last five years of the timeseries (see text). Change in species composition (C) is Bray-Curtis dissimilarity comparing species composition in the first five years to the last five years.  -->
 
-Routes that exhibit decoupling between observed and abundance-driven changes in total biomass exhibit a high prevalence of increases and decreases in mean body size (middle row, panel A) compared to the changes seen in routes that show either no trend or non-decoupled trends. However, routes with all three signatures of dynamics (coupling, decoupling, or no trend) are not detectably different in the degree of overall change in the ISD or in species composition over time (panels B and C).
+<!-- Routes that exhibit decoupling between observed and abundance-driven changes in total biomass exhibit a high prevalence of increases and decreases in mean body size (middle row, panel A) compared to the changes seen in routes that show either no trend or non-decoupled trends. However, routes with all three signatures of dynamics (coupling, decoupling, or no trend) are not detectably different in the degree of overall change in the ISD or in species composition over time (panels B and C). -->
 
-\newpage
+<!-- \newpage -->
 
-# Statistical comparisons of distributions in Figure 4
+<!-- # Statistical comparisons of distributions in Figure 4 -->
 
-### Mean mass
+<!-- ### Mean mass -->
 
-#### Table 3. ANOVA comparing model type to intercept-only model for absolute log ratio of mean mass
+# Appendix S2 Table S1.
 
 ```{r, results = T}
 
@@ -525,10 +526,11 @@ anova(mean_mass_lm, mean_mass_lm_intercept)
 
 ```
 
+*Appendix S2 Table S1.* ANOVA table comparing ordinary linear models of the form abs_log_ratio ~ syndrome and abs_log_ratio ~ 1. The fit incorporating syndrome is superior to the intercept-only model (p < 0.0001).
 
-ANOVA comparing the models `abs_log_ratio_mean_mass ~ best fitting model type` and `abs_log_ratio_mean_mass ~ 1`. The fit incorporating model type is superior to the intercept-only model (p < 0.0001).
+\newpage
 
-#### Table 4. Model estimates for absolute log ratio of mean mass for routes best-described by different dynamics.
+# Appendix S2 Table S2
 
 ```{r, results = T}
 mean_mass_lm_emmeans <- emmeans::emmeans(mean_mass_lm, specs = ~ categorical_fit)
@@ -536,21 +538,21 @@ mean_mass_lm_emmeans <- emmeans::emmeans(mean_mass_lm, specs = ~ categorical_fit
 as.data.frame(mean_mass_lm_emmeans)
 ```
 
-Estimates (calculated using `emmeans` [@lenth2021]) for the mean absolute log ratio of mean mass for routes whose dynamics for biomass best-described by different model types. Routes with decoupled long-term trends between biomass and abundance-driven dynamics have higher absolute log ratios (mean .56, 95% credible interval .53-.58) than routes with covarying trends in biomass and abundance (mean of .2; 95% interval .18-.22) or no detectable temporal trend (mean of .22; .2-.24). 
+**Appendix S2 Table S2.** Estimates (calculated using emmeans [@lenth2021]) for the mean absolute log ratio of mean mass for routes whose dynamics for biomass were best-described by different syndromes of change. Routes with decoupled long-term trends between biomass and abundance-driven dynamics have higher absolute log ratios (mean .56, 95% credible interval .53-.58) than routes with covarying trends in biomass and abundance (mean of .2; 95% interval .18-.22) or no detectable temporal trend (mean of .22; .2-.24).
 
-#### Table 5. Contrasts for absolute log ratio of mean mass.
+\newpage
+
+# Appendix S2 Table S3
 
 ```{r, results = T}
 as.data.frame(pairs(mean_mass_lm_emmeans))
 ```
 
-Contrasts for the above comparisons. There is a significant contrast between routes with decoupled trends and the other two types of dynamics (both contrasts, p < 0.001), but not between "no trend" and "coupled trend" routes (contrast p = .31).
+**Appendix S2 Table S3**. Contrasts for absolute log ratio of mean mass, calculated using emmeans [@lenth2021]. There is a significant contrast between routes with decoupled trends and the other two syndromes of dynamics (both contrasts, p < 0.001), but not between routes showing the “no trend” and “coupled trend” syndromes (contrast p = .31).
 
+\newpage
 
-### ISD turnover
-
-#### Table 6. ANOVA for turnover in the ISD
-
+# Appendix S2 Table S4
 
 ```{r, results = T}
 
@@ -562,9 +564,11 @@ anova(overlap_glm, overlap_glm_intercept, test = "Chi")
 
 ```
 
-### Species compositional turnover
+**Appendix S2 Table S4**. ANOVA table comparing binomial generalized linear models of the form ISD_turnover ~ syndrome and ISD_turnover ~ 1. The model incorporating syndrome is not superior to the intercept-only model (p = .9).
 
-#### Table 7. ANOVA for Bray-Curtis dissimilarity
+\newpage
+
+# Appendix S2 Table S5 
 
 
 ```{r, results = T}
@@ -577,9 +581,7 @@ anova(bcd_glm, bcd_glm_intercept, test = "Chi")
 
 ```
 
-
-ANOVA comparing a binomial GLM of the form `bray curtis dissimilarity ~ best fitting model type` to an intercept-only model. The `best fitting model type` model is not superior to the intercept only model (p = .37).
-
+**Appendix S2 Table S5**. ANOVA table comparing binomial generalized linear models of the form Bray_Curtis_dissimilarity ~ syndrome and Bray_Curtis_dissimilarity ~ 1. The model incorporating syndrome is not superior to the intercept-only model (p = .37).
 
 
 \newpage
