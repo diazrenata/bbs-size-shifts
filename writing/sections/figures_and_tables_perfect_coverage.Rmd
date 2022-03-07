@@ -30,9 +30,12 @@ cache$del(key = "lock", namespace = "session")
 
 ```{r load results and filter to desired temporal coverage}
 
-desired_routes <- read.csv(here::here("analyses", "supporting_data", "ninetypercent_coverage_1988_2018.csv"), stringsAsFactors = F)
+desired_routes <- read.csv(here::here("analyses", "supporting_data", "perfect_coverage_1988_2018.csv"), stringsAsFactors = F)
 
 loadd(all_sims, cache=cache)
+rn <- "bbs_rtrg_28_4"
+
+dat_dynamics <- filter(all_sims, matssname == rn)
 
 all_sims <- all_sims %>%
   filter(matssname %in% desired_routes$matssname)
@@ -64,7 +67,6 @@ all_cs_compares <- all_cs_compares %>%
 
 ```{r, fig.dim = c(5,3)}
 
-rn <- "bbs_rtrg_28_4"
 dat <- readd(rn, character_only = T, cache=cache)
 source(here::here("analyses", "fxns", "is_fxns.R"))
 
@@ -120,7 +122,6 @@ isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(
 ```{r}
 
 
-dat_dynamics <- filter(all_sims, matssname == rn)
 
 dat_glm <- glm(total_biomass ~ timeperiod * source, data = dat_dynamics, family= Gamma(link = "log"))
 
