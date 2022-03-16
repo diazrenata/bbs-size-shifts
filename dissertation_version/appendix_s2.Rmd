@@ -330,7 +330,7 @@ slope_winning_fits_pretty <- slope_winning_fits_summary %>%
   rename(Currency = currency,
          # `Number of routes with abundance-driven increase`= n_abundance_increase,
          # `Number of routes with observed increase`  = n_observed_increase,
-         `Proportion of increasing abundance-driven trends` = prop_abundance_increase,
+         `Proportion of increasing individuals-driven trends` = prop_abundance_increase,
          `Proportion of increasing observed trends` = prop_observed_increase,
          `Number of routes with temporal trends` = n_with_slope)
 
@@ -538,7 +538,7 @@ mean_mass_lm_emmeans <- emmeans::emmeans(mean_mass_lm, specs = ~ categorical_fit
 as.data.frame(mean_mass_lm_emmeans)
 ```
 
-**Appendix S2 Table S2.** Estimates (calculated using emmeans [@lenth2021]) for the mean absolute log ratio of mean mass for routes whose dynamics for biomass were best-described by different syndromes of change. Routes with decoupled long-term trends between biomass and abundance-driven dynamics have higher absolute log ratios (mean .56, 95% credible interval .53-.58) than routes with covarying trends in biomass and abundance (mean of .2; 95% interval .18-.22) or no detectable temporal trend (mean of .22; .2-.24).
+**Appendix S2 Table S2.** Estimates (calculated using emmeans [@lenth2021]) for the mean absolute log ratio of mean mass for routes whose dynamics for biomass were best-described by different syndromes of change. Routes with decoupled long-term trends between biomass and individuals-driven dynamics have higher absolute log ratios (mean .56, 95% credible interval .53-.58) than routes with covarying trends in biomass and individual abundance (mean of .2; 95% interval .18-.22) or no detectable temporal trend (mean of .22; .2-.24).
 
 \newpage
 
