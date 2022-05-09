@@ -17,7 +17,8 @@ datasets <- MATSS::build_bbs_datasets_plan()
 working_datasets <- read.csv(here::here("analyses", "supporting_data","eightypercent_coverage_1988_2018.csv"))
 
 
-datasets <- datasets[ which(datasets$target %in% working_datasets$matssname[1:2]), ]
+#datasets <- datasets[ which(datasets$target %in% working_datasets$matssname[1:2]), ]
+datasets <- datasets[ which(datasets$target %in% working_datasets$matssname), ]
 
 
 methods <- drake_plan(
@@ -47,14 +48,14 @@ methods <- drake_plan(
   all_aics_e = target(dplyr::bind_rows(aics_e),
                       transform = combine(aics_e)),
   all_preds_e = target(dplyr::bind_rows(preds_e),
-                       transform = combine(preds_e)),
-  cs_compares = target(compare_community_structure(dataset, use_sp_means),
-                       transform = map(
-                         dataset = !!rlang::syms(datasets$target),
-                         use_sp_means = T
-                       )),
-  all_cs_compares = target(dplyr::bind_rows(cs_compares),
-                           transform = combine(cs_compares))
+                       transform = combine(preds_e))#,
+  # cs_compares = target(compare_community_structure(dataset, use_sp_means),
+  #                      transform = map(
+  #                        dataset = !!rlang::syms(datasets$target),
+  #                        use_sp_means = T
+  #                      )),
+  # all_cs_compares = target(dplyr::bind_rows(cs_compares),
+  #                          transform = combine(cs_compares))
 )
 
 all = bind_rows(datasets, methods)
