@@ -85,20 +85,21 @@ calc_sv <- function(isd) {
 #' High level wrapper to get annual state variables for observed and null model (abundance-driven) dynamics.
 #'
 #' @param dat MATSS dataset
+#' @param use_sp_means default F passed to simulate_isd_ts
 #'
 #' @return
 #' @export
 #' @importFrom dissBBSsize simulate_isd_ts
 #' @importFrom dplyr mutate bind_rows
-get_annual_state_variables <- function(dat) {
+get_annual_state_variables <- function(dat, use_sp_means = FALSE) {
 
   dat_sliced <- pull_focal_years(dat) # pull years we want
 
   dat_resp <- relabund_null_model(dat_sliced, resp_seed = 1989) # null model
 
-  dat_isd <- dissBBSsize::simulate_isd_ts(dat_sliced, isd_seed = 1989) # isd for observed
+  dat_isd <- dissBBSsize::simulate_isd_ts(dat_sliced, isd_seed = 1989, use_sp_means = use_sp_means) # isd for observed
 
-  dat_resp_isd <- dissBBSsize::simulate_isd_ts(dat_resp, isd_seed = 1989) # isd for null model
+  dat_resp_isd <- dissBBSsize::simulate_isd_ts(dat_resp, isd_seed = 1989, use_sp_means = use_sp_means) # isd for null model
 
   # annual state variables for observed
   real_sv <- calc_sv(dat_isd) %>%
@@ -364,6 +365,7 @@ model_predicted_change <- function(one_model) {
 #' Compares the mean body size, ISDs, and species composition for the first to the last 5 years of the timeseries.
 #'
 #' @param dat a MATSS dataset
+#' @param use_sp_means default F
 #'
 #' @return
 #' @export
@@ -371,15 +373,15 @@ model_predicted_change <- function(one_model) {
 #' @importFrom dissBBSsize simulate_isd_ts
 #' @importFrom dplyr filter left_join select
 #' @importFrom vegan vegdist
-compare_community_structure <- function(dat) {
+compare_community_structure <- function(dat, use_sp_means = F) {
 
   dat_focal_years <-pull_focal_years(dat)
 
   dat_null_mod <- relabund_null_model(dat_focal_years, resp_seed = 1989)
 
-  dat_isd_actual <- dissBBSsize::simulate_isd_ts(dat_focal_years, isd_seed = 1989)
+  dat_isd_actual <- dissBBSsize::simulate_isd_ts(dat_focal_years, isd_seed = 1989, use_sp_means = use_sp_means)
 
-  dat_isd_null <- dissBBSsize::simulate_isd_ts(dat_null_mod, isd_seed = 1989)
+  dat_isd_null <- dissBBSsize::simulate_isd_ts(dat_null_mod, isd_seed = 1989, use_sp_means = use_sp_means)
 
 
   # pull first and last 5 years
