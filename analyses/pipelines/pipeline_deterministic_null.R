@@ -50,7 +50,7 @@ for(i in 1:length(max_caps)) {
                         transform = combine(aics_e)),
     all_preds_e = target(dplyr::bind_rows(preds_e),
                          transform = combine(preds_e)),
-    cs_compares = target(compare_community_structure(dataset, deterministic),
+    cs_compares = target(compare_community_structure(dataset, deterministic = deterministic),
                          transform = map(
                            dataset = !!rlang::syms(datasets$target),
                            deterministic = T
