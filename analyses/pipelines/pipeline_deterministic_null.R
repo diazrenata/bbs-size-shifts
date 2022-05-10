@@ -23,7 +23,7 @@ for(i in 1:length(max_caps)) {
 
 
   methods <- drake_plan(
-    annual_svs = target(get_annual_state_variables(dataset, deterministic),
+    annual_svs = target(get_annual_state_variables(dataset, deterministic = deterministic),
                         transform = map(
                           dataset = !!rlang::syms(datasets$target),
                           deterministic = TRUE

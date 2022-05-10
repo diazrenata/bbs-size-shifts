@@ -52,15 +52,15 @@ Observations…
 
 | currency | model\_formula       |   n | total |
 | :------- | :------------------- | --: | ----: |
-| biomass  | 1                    |  84 |   276 |
-| biomass  | timeperiod           | 137 |   276 |
-| biomass  | timeperiod \* source |  55 |   276 |
-| energy   | 1                    |  84 |   276 |
-| energy   | timeperiod           | 172 |   276 |
-| energy   | timeperiod \* source |  20 |   276 |
+| biomass  | 1                    | 155 |   528 |
+| biomass  | timeperiod           | 262 |   528 |
+| biomass  | timeperiod \* source | 111 |   528 |
+| energy   | 1                    | 160 |   528 |
+| energy   | timeperiod           | 329 |   528 |
+| energy   | timeperiod \* source |  39 |   528 |
 
 </div>
 
-    ## [1] 0.9945652
+    ## [1] 0.9943182
 
 ![](for_jk_files/figure-gfm/process%20energy%20results%20spmean-1.png)<!-- -->![](for_jk_files/figure-gfm/process%20energy%20results%20spmean-2.png)<!-- -->
