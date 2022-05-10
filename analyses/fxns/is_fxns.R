@@ -30,10 +30,11 @@ pull_focal_years <- function(dataset, keep_years = c(1988:2018)) {
 #'
 #' @param dataset a MATSS dataset
 #' @param resp_seed a seed
+#' @param deterministic default FALSE,
 #'
 #' @return
 #'
-relabund_null_model <- function(dataset, resp_seed = 1989) {
+relabund_null_model <- function(dataset, resp_seed = 1989, deterministic = FALSE) {
 
   # Compute each species' relative abundance (proportion of total abundance in that year) in each year
   spRelAbunds <- dataset$abundance/ rowSums(dataset$abundance)
@@ -46,11 +47,22 @@ relabund_null_model <- function(dataset, resp_seed = 1989) {
     as.data.frame(t(rmultinom(1, size  = sum(year_row), prob = spRelAbunds)))
   }
 
+  mean_year <- function(year_row, spRelAbunds) {
+    as.data.frame(t(round(sum(year_row) * spRelAbunds)))
+  }
+
+  if(!deterministic) {
   set.seed(resp_seed)
 
   # Draw species' abundances
   newAbund <- apply(dataset$abundance, MARGIN = 1, FUN = draw_year, spRelAbunds = spRelAbunds)
   set.seed(NULL)
+
+  } else {
+
+
+
+  }
 
   dataset$abundance <- dplyr::bind_rows(newAbund)
 

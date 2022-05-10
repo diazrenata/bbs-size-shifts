@@ -7,7 +7,7 @@ library(dissBBSsize)
 
 
 run_hpg = T
-max_caps <- c(75, 150, 225, 300, 375, 450, 528)
+max_caps <- c(75, 150, 225, 300, 375, 450, 528, 739)
 
 for(i in 1:length(max_caps)) {
   source(here::here("analyses", "fxns", "is_fxns.R"))

@@ -378,7 +378,7 @@ all_aics_e_spmean <- all_aics_e_spmean %>%
 ```
 
 
-```{r process biomass results}
+```{r process biomass results spmean}
 
 # Select the best-fitting model for each route using AICc (simplest model with an AICc score within two units of the minimum)
 # all_aics contains the AIC and AICc scores for every model fit to each route.
@@ -414,7 +414,7 @@ biomass_slopes_long_spmean <- slope_winning_fits_spmean %>%
 ```
 
 
-```{r process energy results}
+```{r process energy results spmean}
 
 
 winning_aics_energy_spmean <- all_aics_e_spmean %>%
@@ -471,5 +471,18 @@ winning_fits_both_compare <- winning_fits_both_spmean %>%
 
 mean(winning_fits_both_compare$same_outcome)
 
+
+all_sims_compare <- all_sims_spmean %>%
+  rename(total_energy_spmean = total_energy,
+         total_biomass_spmean = total_biomass) %>%
+  left_join(all_sims)
+
+ggplot(all_sims_compare, aes(total_biomass_spmean, total_biomass)) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
+
+ggplot(all_sims_compare, aes(total_energy_spmean, total_energy)) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
 
 ```

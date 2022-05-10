@@ -1,4 +1,17 @@
 
+<div class="kable-table">
+
+| currency | model\_formula       |   n |
+| :------- | :------------------- | --: |
+| biomass  | 1                    | 239 |
+| biomass  | timeperiod           | 351 |
+| biomass  | timeperiod \* source | 149 |
+| energy   | 1                    | 230 |
+| energy   | timeperiod           | 456 |
+| energy   | timeperiod \* source |  53 |
+
+</div>
+
 ## New figs here\!\!\!
 
 # Figure 3. Visualizing decoupling
@@ -32,3 +45,22 @@ Observations…
 </div>
 
 ![](for_jk_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+# Results using 0 standard deviation
+
+<div class="kable-table">
+
+| currency | model\_formula       |   n | total |
+| :------- | :------------------- | --: | ----: |
+| biomass  | 1                    |  84 |   276 |
+| biomass  | timeperiod           | 137 |   276 |
+| biomass  | timeperiod \* source |  55 |   276 |
+| energy   | 1                    |  84 |   276 |
+| energy   | timeperiod           | 172 |   276 |
+| energy   | timeperiod \* source |  20 |   276 |
+
+</div>
+
+    ## [1] 0.9945652
+
+![](for_jk_files/figure-gfm/process%20energy%20results%20spmean-1.png)<!-- -->![](for_jk_files/figure-gfm/process%20energy%20results%20spmean-2.png)<!-- -->
