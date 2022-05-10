@@ -6,7 +6,7 @@ library(MATSS)
 library(dissBBSsize)
 
 
-run_hpg = F
+run_hpg = T
 max_caps <- c(75, 150, 225, 300, 375, 450, 528)
  for(i in 1:length(max_caps)) {
 source(here::here("analyses", "fxns", "is_fxns.R"))

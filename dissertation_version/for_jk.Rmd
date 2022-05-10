@@ -135,6 +135,10 @@ winning_fits_both <- winning_fits %>%
   bind_rows(mutate(winning_fits_energy, currency = "energy"))
 
 
+winning_fits_both %>%
+  group_by(currency, model_formula) %>%
+  tally()
+
 ```
 
 ## New figs here!!!
@@ -342,3 +346,117 @@ two_plots <- multi_panel_figure(columns = 1 ,height = c(2,2,2.25), unit = "in") 
 two_plots
 ```
 
+# Results using 0 standard deviation
+
+```{r}
+
+## Set up the cache and config
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all_sp_means.sqlite"))
+cache <- storr::storr_dbi("datatable", "keystable", db)
+cache$del(key = "lock", namespace = "session")
+
+all_sims_spmean <- readd(all_sims, cache=cache)
+
+all_sims_spmean <- all_sims_spmean %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_preds_b_spmean <- readd(all_preds_b, cache=cache)
+all_preds_b_spmean <- all_preds_b_spmean %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_aics_b_spmean <- readd(all_aics_b, cache=cache)
+all_aics_b_spmean <- all_aics_b_spmean %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_preds_e_spmean <- readd(all_preds_e, cache=cache)
+all_preds_e_spmean <- all_preds_e_spmean %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_aics_e_spmean <- readd(all_aics_e, cache=cache)
+all_aics_e_spmean <- all_aics_e_spmean %>%
+  filter(matssname %in% desired_routes$matssname)
+```
+
+
+```{r process biomass results}
+
+# Select the best-fitting model for each route using AICc (simplest model with an AICc score within two units of the minimum)
+# all_aics contains the AIC and AICc scores for every model fit to each route.
+
+winning_aics_spmean <- all_aics_b_spmean %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
+  ungroup()
+
+
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits_spmean <- winning_aics_spmean %>%
+  left_join(all_preds_b_spmean) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
+slope_winning_fits_spmean <- winning_fits_spmean %>%
+  filter(modelcomplexity > 1)
+
+# Pivot longer for plotting and summarizing
+biomass_slopes_long_spmean <- slope_winning_fits_spmean %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "biomass_ratio") %>%
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Individuals driven", "Observed"))
+
+```
+
+
+```{r process energy results}
+
+
+winning_aics_energy_spmean <- all_aics_e_spmean %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
+  ungroup()
+
+
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits_energy_spmean <- winning_aics_energy_spmean %>%
+  left_join(all_preds_e) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
+slope_winning_fits_energy_spmean <- winning_fits_energy_spmean %>%
+  filter(modelcomplexity > 1)
+
+# Pivot longer for plotting and summarizing
+energy_slopes_long_spmean <- slope_winning_fits_energy_spmean %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "energy_ratio") %>%
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Individuals driven", "Observed"))
+
+
+# Combine energy and biomass results into one dataframe
+winning_fits_both_spmean <- winning_fits_spmean %>%
+  mutate(currency = "biomass") %>%
+  bind_rows(mutate(winning_fits_energy_spmean, currency = "energy"))
+
+
+winning_fits_both_spmean %>%
+  group_by(currency, model_formula) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(currency) %>%
+  mutate(total = sum(n))
+
+```
