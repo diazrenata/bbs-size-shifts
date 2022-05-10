@@ -7,18 +7,18 @@ library(dissBBSsize)
 
 
 run_hpg = F
-#max_caps <- c(75, 150, 225, 300, 375, 450, 528)
-# for(i in 1:length(max_caps)) {
+max_caps <- c(75, 150, 225, 300, 375, 450, 528)
+ for(i in 1:length(max_caps)) {
 source(here::here("analyses", "fxns", "is_fxns.R"))
 #i = 1
 datasets <- MATSS::build_bbs_datasets_plan()
 
 
-working_datasets <- read.csv(here::here("analyses", "supporting_data","perfect_coverage_1988_2018.csv"))
+working_datasets <- read.csv(here::here("analyses", "supporting_data","eightypercent_coverage_1988_2018.csv"))
 
 
 #datasets <- datasets[ which(datasets$target %in% working_datasets$matssname[1:2]), ]
-datasets <- datasets[ which(datasets$target %in% working_datasets$matssname), ]
+datasets <- datasets[ which(datasets$target %in% working_datasets$matssname)[1:max_caps[i]], ]
 
 
 methods <- drake_plan(
@@ -99,4 +99,5 @@ if(run_hpg) {
                    lock_envir = F,
                    garbage_collection = T))
 
+}
 }
