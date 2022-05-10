@@ -459,4 +459,17 @@ winning_fits_both_spmean %>%
   group_by(currency) %>%
   mutate(total = sum(n))
 
+add_spmean <- function(x) {
+  paste0(x, "_spmean")
+}
+
+winning_fits_both_compare <- winning_fits_both_spmean %>%
+  rename_all(add_spmean) %>%
+  left_join(winning_fits_both, by = c("matssname_spmean" = "matssname",
+                                      "currency_spmean" = "currency")) %>%
+  mutate(same_outcome = model_formula == model_formula_spmean)
+
+mean(winning_fits_both_compare$same_outcome)
+
+
 ```
