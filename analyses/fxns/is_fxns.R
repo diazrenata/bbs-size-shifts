@@ -30,7 +30,7 @@ pull_focal_years <- function(dataset, keep_years = c(1988:2018)) {
 #'
 #' @param dataset a MATSS dataset
 #' @param resp_seed a seed
-#' @param deterministic default FALSE,
+#' @param deterministic default FALSE
 #'
 #' @return
 #'
@@ -61,6 +61,8 @@ relabund_null_model <- function(dataset, resp_seed = 1989, deterministic = FALSE
   } else {
 
 
+    # Draw species' abundances
+    newAbund <- apply(dataset$abundance, MARGIN = 1, FUN = mean_year, spRelAbunds = spRelAbunds)
 
   }
 
@@ -98,16 +100,17 @@ calc_sv <- function(isd) {
 #'
 #' @param dat MATSS dataset
 #' @param use_sp_means default F passed to simulate_isd_ts
+#' @param deterministic default F passed to relabund_null_model
 #'
 #' @return
 #' @export
 #' @importFrom dissBBSsize simulate_isd_ts
 #' @importFrom dplyr mutate bind_rows
-get_annual_state_variables <- function(dat, use_sp_means = FALSE) {
+get_annual_state_variables <- function(dat, use_sp_means = FALSE, deterministic = FALSE) {
 
   dat_sliced <- pull_focal_years(dat) # pull years we want
 
-  dat_resp <- relabund_null_model(dat_sliced, resp_seed = 1989) # null model
+  dat_resp <- relabund_null_model(dat_sliced, resp_seed = 1989, deterministic= deterministic) # null model
 
   dat_isd <- dissBBSsize::simulate_isd_ts(dat_sliced, isd_seed = 1989, use_sp_means = use_sp_means) # isd for observed
 
@@ -378,6 +381,7 @@ model_predicted_change <- function(one_model) {
 #'
 #' @param dat a MATSS dataset
 #' @param use_sp_means default F
+#' @param deterministic default F, passed to relabund_null_model
 #'
 #' @return
 #' @export
@@ -385,7 +389,7 @@ model_predicted_change <- function(one_model) {
 #' @importFrom dissBBSsize simulate_isd_ts
 #' @importFrom dplyr filter left_join select
 #' @importFrom vegan vegdist
-compare_community_structure <- function(dat, use_sp_means = F) {
+compare_community_structure <- function(dat, use_sp_means = F, deterministic = F) {
 
   dat_focal_years <-pull_focal_years(dat)
 
