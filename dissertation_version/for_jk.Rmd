@@ -486,3 +486,153 @@ ggplot(all_sims_compare, aes(total_energy_spmean, total_energy)) +
   geom_abline(slope = 1, intercept = 0)
 
 ```
+
+# Results running the null model deterministically
+
+Instead of sampling N individuals from a multinomial with weighted probabilities, multiply  the vector of probability weights by N. Because we need to have whole numbers of birds, we round to integers. This can result in a number of individuals that is not equal to N; as far as I've seen it tends to result in _fewer_ individuals than N. 
+
+
+```{r}
+
+## Set up the cache and config
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all_deterministic_null.sqlite"))
+cache <- storr::storr_dbi("datatable", "keystable", db)
+cache$del(key = "lock", namespace = "session")
+
+all_sims_dnull <- readd(all_sims, cache=cache)
+
+all_sims_dnull <- all_sims_dnull %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_preds_b_dnull <- readd(all_preds_b, cache=cache)
+all_preds_b_dnull <- all_preds_b_dnull %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_aics_b_dnull <- readd(all_aics_b, cache=cache)
+all_aics_b_dnull <- all_aics_b_dnull %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_preds_e_dnull <- readd(all_preds_e, cache=cache)
+all_preds_e_dnull <- all_preds_e_dnull %>%
+  filter(matssname %in% desired_routes$matssname)
+
+all_aics_e_dnull <- readd(all_aics_e, cache=cache)
+all_aics_e_dnull <- all_aics_e_dnull %>%
+  filter(matssname %in% desired_routes$matssname)
+```
+
+
+```{r process biomass results dnull}
+
+# Select the best-fitting model for each route using AICc (simplest model with an AICc score within two units of the minimum)
+# all_aics contains the AIC and AICc scores for every model fit to each route.
+
+winning_aics_dnull <- all_aics_b_dnull %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
+  ungroup()
+
+
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits_dnull <- winning_aics_dnull %>%
+  left_join(all_preds_b_dnull) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
+slope_winning_fits_dnull <- winning_fits_dnull %>%
+  filter(modelcomplexity > 1)
+
+# Pivot longer for plotting and summarizing
+biomass_slopes_long_dnull <- slope_winning_fits_dnull %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "biomass_ratio") %>%
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Individuals driven", "Observed"))
+
+```
+
+
+```{r process energy results dnull}
+
+
+winning_aics_energy_dnull <- all_aics_e_dnull %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
+  ungroup()
+
+
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits_energy_dnull <- winning_aics_energy_dnull %>%
+  left_join(all_preds_e) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
+slope_winning_fits_energy_dnull <- winning_fits_energy_dnull %>%
+  filter(modelcomplexity > 1)
+
+# Pivot longer for plotting and summarizing
+energy_slopes_long_dnull <- slope_winning_fits_energy_dnull %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "energy_ratio") %>%
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Individuals driven", "Observed"))
+
+
+# Combine energy and biomass results into one dataframe
+winning_fits_both_dnull <- winning_fits_dnull %>%
+  mutate(currency = "biomass") %>%
+  bind_rows(mutate(winning_fits_energy_dnull, currency = "energy"))
+
+
+winning_fits_both_dnull %>%
+  group_by(currency, model_formula) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(currency) %>%
+  mutate(total = sum(n))
+
+add_dnull <- function(x) {
+  paste0(x, "_dnull")
+}
+
+winning_fits_both_compare <- winning_fits_both_dnull %>%
+  rename_all(add_dnull) %>%
+  left_join(winning_fits_both, by = c("matssname_dnull" = "matssname",
+                                      "currency_dnull" = "currency")) %>%
+  mutate(same_outcome = model_formula == model_formula_dnull)
+
+mean(winning_fits_both_compare$same_outcome)
+
+
+all_sims_compare_dn <- all_sims_dnull %>%
+  rename(abundance_dnull = abundance,
+    total_energy_dnull = total_energy,
+         total_biomass_dnull = total_biomass) %>%
+  left_join(all_sims)
+
+
+ggplot(all_sims_compare_dn, aes(abundance_dnull, abundance)) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
+
+ggplot(all_sims_compare_dn, aes(total_biomass_dnull, total_biomass)) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
+
+ggplot(all_sims_compare_dn, aes(total_energy_dnull, total_energy)) + 
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
+
+```

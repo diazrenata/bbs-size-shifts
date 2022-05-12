@@ -52,15 +52,42 @@ Observations…
 
 | currency | model\_formula       |   n | total |
 | :------- | :------------------- | --: | ----: |
-| biomass  | 1                    | 155 |   528 |
-| biomass  | timeperiod           | 262 |   528 |
-| biomass  | timeperiod \* source | 111 |   528 |
-| energy   | 1                    | 160 |   528 |
-| energy   | timeperiod           | 329 |   528 |
-| energy   | timeperiod \* source |  39 |   528 |
+| biomass  | 1                    | 239 |   739 |
+| biomass  | timeperiod           | 352 |   739 |
+| biomass  | timeperiod \* source | 148 |   739 |
+| energy   | 1                    | 230 |   739 |
+| energy   | timeperiod           | 454 |   739 |
+| energy   | timeperiod \* source |  55 |   739 |
 
 </div>
 
-    ## [1] 0.9943182
+    ## [1] 0.9939107
 
 ![](for_jk_files/figure-gfm/process%20energy%20results%20spmean-1.png)<!-- -->![](for_jk_files/figure-gfm/process%20energy%20results%20spmean-2.png)<!-- -->
+
+# Results running the null model deterministically
+
+Instead of sampling N individuals from a multinomial with weighted
+probabilities, multiply the vector of probability weights by N. Because
+we need to have whole numbers of birds, we round to integers. This can
+result in a number of individuals that is not equal to N; as far as I’ve
+seen it tends to result in *fewer* individuals than N.
+
+<div class="kable-table">
+
+| currency | model\_formula       |   n | total |
+| :------- | :------------------- | --: | ----: |
+| biomass  | 1                    | 207 |   739 |
+| biomass  | timeperiod           | 363 |   739 |
+| biomass  | timeperiod \* source | 162 |   739 |
+| biomass  | timeperiod + source  |   7 |   739 |
+| energy   | 1                    | 223 |   739 |
+| energy   | timeperiod           | 461 |   739 |
+| energy   | timeperiod \* source |  54 |   739 |
+| energy   | timeperiod + source  |   1 |   739 |
+
+</div>
+
+    ## [1] 0.9221922
+
+![](for_jk_files/figure-gfm/process%20energy%20results%20dnull-1.png)<!-- -->![](for_jk_files/figure-gfm/process%20energy%20results%20dnull-2.png)<!-- -->![](for_jk_files/figure-gfm/process%20energy%20results%20dnull-3.png)<!-- -->
