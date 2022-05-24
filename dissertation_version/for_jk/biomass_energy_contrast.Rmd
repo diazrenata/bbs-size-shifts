@@ -1,0 +1,541 @@
+---
+output:
+  html_document:
+    df_print: kable
+csl: ecology.csl
+bibliography: refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, include = T, results = T, message = F, warning = F, eval = T, fig.dim = c(4,4))
+library(dplyr)
+library(drake)
+library(multipanelfigure)
+library(ggplot2)
+theme_set(theme_bw())
+
+## Set up the cache and config
+db <- DBI::dbConnect(RSQLite::SQLite(), here::here("analyses", "caches", "all.sqlite"))
+cache <- storr::storr_dbi("datatable", "keystable", db)
+cache$del(key = "lock", namespace = "session")
+
+
+```
+
+
+```{r load results and filter to desired temporal coverage}
+
+desired_routes <- read.csv(here::here("analyses", "supporting_data", "ninetypercent_coverage_1988_2018.csv"), stringsAsFactors = F)
+
+loadd(all_sims, cache=cache)
+
+all_sims <- all_sims %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_preds_b, cache=cache)
+all_preds_b <- all_preds_b %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_aics_b, cache=cache)
+all_aics_b <- all_aics_b %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_preds_e, cache=cache)
+all_preds_e <- all_preds_e %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_aics_e, cache=cache)
+all_aics_e <- all_aics_e %>%
+  filter(matssname %in% desired_routes$matssname)
+
+loadd(all_cs_compares, cache =cache)
+all_cs_compares <- all_cs_compares %>%
+  filter(matssname %in% desired_routes$matssname)
+
+```
+
+
+
+```{r process biomass results}
+
+# Select the best-fitting model for each route using AICc (simplest model with an AICc score within two units of the minimum)
+# all_aics contains the AIC and AICc scores for every model fit to each route.
+
+winning_aics <- all_aics_b %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
+  ungroup()
+
+
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits <- winning_aics %>%
+  left_join(all_preds_b) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
+slope_winning_fits <- winning_fits %>%
+  filter(modelcomplexity > 1)
+
+# Pivot longer for plotting and summarizing
+biomass_slopes_long <- slope_winning_fits %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "biomass_ratio") %>%
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Individuals driven", "Observed"))
+
+```
+
+
+```{r process energy results}
+
+
+winning_aics_energy <- all_aics_e %>%
+  filter(model_family == "Gamma") %>% # I fit both Gamma and Gaussian models. The Gaussian are easier to interpret (slope terms can be read out directly) but are less strictly appropriate for strictly-positive biomass/energy use data.
+  group_by(matssname, model_family) %>%
+  mutate(minAICc = min(model_AICc)) %>% # identify best AICc
+  mutate(deltaAICc = minAICc - model_AICc)  %>% # deltaAICc is the difference between each model's AICc and the best AICc for that pool
+  filter(deltaAICc > -2) %>% # use 2 as a rule of thumb cutoff 
+  arrange(matssname, modelcomplexity) %>% # rank by model complexity. 1 is simplest, 4 is most complex.
+  mutate(rank = row_number()) %>% 
+  filter(rank == 1) %>% # select the simplest model with deltaAICc within 2 of the best
+  ungroup()
+
+
+# Get predicted changes for winning models
+# all_preds contains predicted trends for all models; the left_join effectively filters to the models in winning_aics.
+winning_fits_energy <- winning_aics_energy %>%
+  left_join(all_preds_e) 
+
+
+# Get changes for winning models *only for routes for which there is some temporal trend*; i.e. the winning model is not the intercept-only model.
+slope_winning_fits_energy <- winning_fits_energy %>%
+  filter(modelcomplexity > 1)
+
+# Pivot longer for plotting and summarizing
+energy_slopes_long <- slope_winning_fits_energy %>%
+  select(matssname, ratio_sim, ratio_real) %>%
+  tidyr::pivot_longer(-matssname, names_to = "source", values_to = "energy_ratio") %>%
+  mutate(Dynamics = ifelse(source == "ratio_sim", "Individuals driven", "Observed"))
+
+
+# Combine energy and biomass results into one dataframe
+winning_fits_both <- winning_fits %>%
+  mutate(currency = "biomass") %>%
+  bind_rows(mutate(winning_fits_energy, currency = "energy"))
+
+```
+
+
+```{r}
+
+interaction_all_fits <- all_preds_b %>% 
+  # get just the change ratios from the interaction models - regardless of whether the interaction model is the best-fitting model. this is because we want an estimate of the slope, we'll color by model fit in a minute
+  group_by_all() %>% 
+  filter(grepl( "* source",model_formula), model_family == "Gamma") %>%
+  mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>%
+  ungroup() %>%
+  # now join to *winning* formulas to get the best fitting formula
+  left_join(select(winning_fits, matssname, model_formula, modelcomplexity) %>%
+              rename(winning_formula = model_formula)) %>%
+  select(winning_formula, ratio_sim, ratio_real, matssname, modelcomplexity) %>%
+  mutate(currency = "Biomass")
+
+
+interaction_all_fits_energy <- all_preds_e  %>% 
+  # get just the change ratios from the interaction models - regardless of whether the interaction model is the best-fitting model. this is because we want an estimate of the slope, we'll color by model fit in a minute
+  group_by_all() %>% 
+  filter(grepl( "* source",model_formula), model_family == "Gamma") %>%
+  mutate(plus = substr(model_formula, 12,12) == "+") %>% filter(!plus) %>%
+  ungroup() %>%
+  # now join to *winning* formulas to get the best fitting formula
+  left_join(select(winning_fits_energy, matssname, model_formula, modelcomplexity) %>%
+              rename(winning_formula = model_formula)) %>%
+  select(winning_formula, ratio_sim, ratio_real, matssname, modelcomplexity) %>%
+  mutate(currency = "Energy use")
+
+
+all_interaction <- bind_rows(interaction_all_fits, interaction_all_fits_energy) %>%
+  mutate(Syndrome = ifelse(modelcomplexity == 1, "No trend", ifelse(modelcomplexity == 2, "Coupled trend", "Decoupled trends")))
+
+all_interaction_wide <- all_interaction %>%
+  mutate(currency2 = gsub(" ", "_", currency)) %>%
+  tidyr::pivot_wider( id_cols = matssname, names_from = currency2, values_from = c(ratio_sim, ratio_real, modelcomplexity, winning_formula, Syndrome)) %>%
+  mutate(Same_syndrome = ifelse(Syndrome_Biomass == Syndrome_Energy_use,
+                                "Same syndromes for both currencies",
+                                "Different syndromes"))
+
+```
+
+
+## Example of biomass and energy showing different behaviors
+
+For about 1/4 of routes, biomass and total energy use have different "syndromes" (coupled trend, decoupled trend, no trend):
+
+```{r}
+
+all_interaction_wide %>%
+  group_by(Same_syndrome) %>%
+  tally() %>%
+  mutate(total = sum(n),
+         prop = round(n/sum(n), digits = 2))
+
+```
+
+
+What stands out to me about this is that, in instances where they show different "syndromes" (left panel), usually the slope for energy use is less positive than for biomass (90% of the time for these routes; this is somewhat overrepresented compared to 78% of the time for routes with the same "syndrome"). 
+
+```{r, fig.dim = c(7,7)}
+ggplot(all_interaction_wide, aes(ratio_real_Biomass, ratio_real_Energy_use, color = Syndrome_Energy_use, shape = Syndrome_Biomass)) + 
+  geom_point() + 
+  facet_wrap(vars(Same_syndrome)) + 
+  scale_x_log10() + 
+  scale_y_log10() + 
+  geom_abline(slope = 1, intercept = 0) + 
+  geom_vline(xintercept = 1) + 
+  geom_hline(yintercept = 1) +
+  theme(legend.position = "bottom") +
+  scale_color_viridis_d(end = .8)
+# 
+# all_interaction_wide %>%
+#   filter(Same_syndrome == "Different syndromes") %>%
+#   group_by(Syndrome_Biomass, Syndrome_Energy_use) %>%
+#   tally() %>% 
+#   ungroup() %>%
+#   mutate(total = sum(n)) %>%
+#   mutate(prop = n / total)
+
+all_interaction_wide %>%
+  mutate(Biomass_more_positive_than_energy = ratio_real_Biomass > ratio_real_Energy_use) %>%
+  group_by(Same_syndrome, Biomass_more_positive_than_energy) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(Same_syndrome) %>%
+  mutate(total = sum(n))  %>%
+  mutate(prop = n / total)
+
+```
+
+
+
+
+
+## Sample route with different syndromes
+
+Here is an example of a route where biomass shows the "Decoupled trend" syndrome and energy use shows a "coupled trend". For this route, biomass shows a positive slope (ratio of last:first value of 1.22) and energy use a negative slope (ratio of last:first of .9). Individual abundance shows a decline (ratio of last:first of .7). Because the slope for biomass is more positive than for individual abundance (1.22 compared to .7; recall that ratios > 1 are increasing and < 1 are decreasing), we know that community-wide mean body size has increased for this route. Because energy use scales nonlinearly with biomass with an exponent < 1, community-wide mean _per capita metabolic rate_ has not increased as much as mean body size has (but has still increased, because the slope for energy use is less negative than for individual abundance). 
+
+
+```{r}
+
+different_syndrome_names <- filter(all_interaction_wide, Syndrome_Biomass != Syndrome_Energy_use)
+
+rn <- "bbs_rtrg_6_39"
+
+filter(different_syndrome_names, matssname == rn)
+
+```
+
+```{r, fig.dim = c(5,3)}
+
+dat <- readd(rn, character_only = T, cache=cache)
+source(here::here("analyses", "fxns", "is_fxns.R"))
+
+dat_obs <- pull_focal_years(dat)
+dat_null <- relabund_null_model(dat_obs)
+
+dat_isd_obs <- simulate_isd_ts(dat_obs, isd_seed = 1989)
+dat_isd_null <- simulate_isd_ts(dat_null, isd_seed = 1989)
+
+years <- unique(dat_obs$covariates$year)
+
+begin_years <- years[1:5]
+end_years <- years[(length(years) - 4):length(years)]
+
+begin_isd_real <- filter(dat_isd_obs$isd, year %in% begin_years)
+end_isd_real <- filter(dat_isd_obs$isd, year %in% end_years )
+
+begin_isd_sim <- filter(dat_isd_null$isd, year %in% begin_years)
+end_isd_sim <- filter(dat_isd_null$isd, year %in% end_years)
+
+begin_isd_gmm_real <- add_gmm(begin_isd_real) %>%
+  mutate(time = "begin")
+end_isd_gmm_real <- add_gmm(end_isd_real) %>%
+  mutate(time = "end")
+
+real_gmms <- bind_rows(begin_isd_gmm_real, end_isd_gmm_real) %>%
+  mutate(Dynamics = "Observed")
+
+begin_isd_gmm_sim <- add_gmm(begin_isd_sim) %>%
+  mutate(time = "begin")
+end_isd_gmm_sim <- add_gmm(end_isd_sim)  %>%
+  mutate(time = "end")
+sim_gmms <- bind_rows(begin_isd_gmm_sim, end_isd_gmm_sim) %>%
+  mutate(Dynamics = "Individuals driven")
+
+both_gmms <- bind_rows(real_gmms, sim_gmms) %>%
+  mutate(Time = time)
+```
+
+This intuition plays out if we calculate the mean body mass and mean metabolic flux off of the ISDs for the first and last 5-year periods. Total abundance has declined (end:begin ratio of .7). Mean metabolic rate and mean biomass have both increased, but the increase in biomass is greater than the increase in metabolic rate (1.63 vs 1.24).
+
+```{r}
+
+both_real_isds <- bind_rows(begin_isd_real, end_isd_real) %>%
+  mutate(timeperiod = ifelse(year < 2000, "begin", "end")) %>%
+  mutate(metflux = dissBBSsize::estimate_b(mass))
+
+
+both_real_isds %>%
+  group_by(timeperiod) %>%
+  summarize(totaln = dplyr::n(),
+         mean_body_mass = mean(mass),
+         mean_metabolic_flux = mean(metflux))
+
+
+both_real_isds %>%
+  group_by(timeperiod) %>%
+  summarize(totaln = dplyr::n(),
+         mean_body_mass = mean(mass),
+         mean_metabolic_flux = mean(metflux)) %>%
+  tidyr::pivot_wider(names_from = timeperiod, values_from = c(totaln, mean_body_mass, mean_metabolic_flux)) %>%
+  transmute(totaln_ratio = totaln_end / totaln_begin,
+         mean_body_mass_ratio = mean_body_mass_end / mean_body_mass_begin,
+         mean_metabolic_flux_ratio = mean_metabolic_flux_end / mean_metabolic_flux_begin)
+
+
+```
+
+```{r}
+isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(mass), density, color = Dynamics, linetype = Time)) + 
+  geom_line() + 
+  facet_wrap(vars(Dynamics), ncol = 2, scales = "free_y") + 
+  theme(legend.position = "bottom") + 
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
+  ylab("Probability density")+ 
+  xlab("Mass (g); note log scale") +
+  scale_x_log10()
+
+#isd_plots
+
+```
+
+```{r}
+
+
+dat_dynamics <- filter(all_sims, matssname == rn)
+
+dat_glm <- glm(total_biomass ~ timeperiod * source, data = dat_dynamics, family= Gamma(link = "log"))
+
+dat_lm <- lm(total_biomass ~ timeperiod * source, data = dat_dynamics)
+
+
+dat_dynamics <- dat_dynamics %>%
+  mutate(fitted = predict(dat_glm, type = "response")) %>%
+  mutate(Dynamics = ifelse(source == "sim", "Abundance driven", "Observed")) %>%
+  mutate(time = "begin") 
+
+timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = Dynamics)) +
+  geom_point() + 
+  geom_line() + 
+  geom_line(aes(y = fitted)) + 
+  # geom_rect(aes(xmin = years[1], xmax = years[5], ymin = min(total_biomass), ymax = max(total_biomass), time = "begin"), alpha = 0, color = "black")+ 
+  # geom_rect(data=  mutate(dat_dynamics, time = "end"), aes(xmin = years[length(years) - 4], xmax = years[length(years)], ymin = min(total_biomass), ymax = max(total_biomass),linetype = time), alpha = 0, color = "black")+
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
+  theme(legend.position = "none") +
+  xlab("Year") +
+  ylab("Biomass")
+
+
+dat_glm_e <- glm(total_energy ~ timeperiod * source, data = dat_dynamics, family= Gamma(link = "log"))
+
+
+dat_dynamics_e <- dat_dynamics %>%
+  mutate(fitted = predict(dat_glm_e, type = "response")) %>%
+  mutate(Dynamics = ifelse(source == "sim", "Abundance driven", "Observed")) %>%
+  mutate(time = "begin") 
+
+timeseries_plot_e <- ggplot(dat_dynamics_e, aes(timeperiod, total_energy, color = Dynamics)) +
+  geom_point() + 
+  geom_line() + 
+  geom_line(aes(y = fitted)) + 
+  # geom_rect(aes(xmin = years[1], xmax = years[5], ymin = min(total_biomass), ymax = max(total_biomass), time = "begin"), alpha = 0, color = "black")+ 
+  # geom_rect(data=  mutate(dat_dynamics, time = "end"), aes(xmin = years[length(years) - 4], xmax = years[length(years)], ymin = min(total_biomass), ymax = max(total_biomass),linetype = time), alpha = 0, color = "black")+
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
+  theme(legend.position = "none") +
+  xlab("Year") +
+  ylab("Energy use")
+
+
+
+#timeseries_plot
+```
+
+```{r, fig.dim = c(6,9)}
+two_plots <- multi_panel_figure(columns = 1 ,height = c(2,2,2.25), unit = "in") %>%
+  fill_panel(timeseries_plot) %>%
+  fill_panel(timeseries_plot_e) %>%
+  fill_panel(isd_plots)
+
+two_plots
+```
+
+
+
+## Sample route with the same syndrome
+
+```{r}
+
+same_syndrome_names <- filter(all_interaction_wide, Syndrome_Biomass == Syndrome_Energy_use)
+# (filter(same_syndrome_names, modelcomplexity_Biomass == 4, ratio_real_Biomass > 1, ratio_sim_Biomass < 1))
+rn <- "bbs_rtrg_44_17"
+
+filter(same_syndrome_names, matssname == rn)
+
+```
+
+```{r, fig.dim = c(5,3)}
+
+dat <- readd(rn, character_only = T, cache=cache)
+source(here::here("analyses", "fxns", "is_fxns.R"))
+
+dat_obs <- pull_focal_years(dat)
+dat_null <- relabund_null_model(dat_obs)
+
+dat_isd_obs <- simulate_isd_ts(dat_obs, isd_seed = 1989)
+dat_isd_null <- simulate_isd_ts(dat_null, isd_seed = 1989)
+
+years <- unique(dat_obs$covariates$year)
+
+begin_years <- years[1:5]
+end_years <- years[(length(years) - 4):length(years)]
+
+begin_isd_real <- filter(dat_isd_obs$isd, year %in% begin_years)
+end_isd_real <- filter(dat_isd_obs$isd, year %in% end_years )
+
+begin_isd_sim <- filter(dat_isd_null$isd, year %in% begin_years)
+end_isd_sim <- filter(dat_isd_null$isd, year %in% end_years)
+
+begin_isd_gmm_real <- add_gmm(begin_isd_real) %>%
+  mutate(time = "begin")
+end_isd_gmm_real <- add_gmm(end_isd_real) %>%
+  mutate(time = "end")
+
+real_gmms <- bind_rows(begin_isd_gmm_real, end_isd_gmm_real) %>%
+  mutate(Dynamics = "Observed")
+
+begin_isd_gmm_sim <- add_gmm(begin_isd_sim) %>%
+  mutate(time = "begin")
+end_isd_gmm_sim <- add_gmm(end_isd_sim)  %>%
+  mutate(time = "end")
+sim_gmms <- bind_rows(begin_isd_gmm_sim, end_isd_gmm_sim) %>%
+  mutate(Dynamics = "Individuals driven")
+
+both_gmms <- bind_rows(real_gmms, sim_gmms) %>%
+  mutate(Time = time)
+```
+
+```{r}
+
+both_real_isds <- bind_rows(begin_isd_real, end_isd_real) %>%
+  mutate(timeperiod = ifelse(year < 2000, "begin", "end")) %>%
+  mutate(metflux = dissBBSsize::estimate_b(mass))
+
+
+both_real_isds %>%
+  group_by(timeperiod) %>%
+  summarize(totaln = dplyr::n(),
+         mean_body_mass = mean(mass),
+         mean_metabolic_flux = mean(metflux))
+
+
+both_real_isds %>%
+  group_by(timeperiod) %>%
+  summarize(totaln = dplyr::n(),
+         mean_body_mass = mean(mass),
+         mean_metabolic_flux = mean(metflux)) %>%
+  tidyr::pivot_wider(names_from = timeperiod, values_from = c(totaln, mean_body_mass, mean_metabolic_flux)) %>%
+  transmute(totaln_ratio = totaln_end / totaln_begin,
+         mean_body_mass_ratio = mean_body_mass_end / mean_body_mass_begin,
+         mean_metabolic_flux_ratio = mean_metabolic_flux_end / mean_metabolic_flux_begin)
+
+
+```
+
+```{r}
+isd_plots <- ggplot(filter(both_gmms, exp(mass) > 5, exp(mass) < 5000), aes(exp(mass), density, color = Dynamics, linetype = Time)) + 
+  geom_line() + 
+  facet_wrap(vars(Dynamics), ncol = 2, scales = "free_y") + 
+  theme(legend.position = "bottom") + 
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
+  ylab("Probability density")+ 
+  xlab("Mass (g); note log scale") +
+  scale_x_log10()
+
+#isd_plots
+
+```
+
+```{r}
+
+
+dat_dynamics <- filter(all_sims, matssname == rn)
+
+dat_glm <- glm(total_biomass ~ timeperiod * source, data = dat_dynamics, family= Gamma(link = "log"))
+
+dat_lm <- lm(total_biomass ~ timeperiod * source, data = dat_dynamics)
+
+
+dat_dynamics <- dat_dynamics %>%
+  mutate(fitted = predict(dat_glm, type = "response")) %>%
+  mutate(Dynamics = ifelse(source == "sim", "Abundance driven", "Observed")) %>%
+  mutate(time = "begin") 
+
+timeseries_plot <- ggplot(dat_dynamics, aes(timeperiod, total_biomass, color = Dynamics)) +
+  geom_point() + 
+  geom_line() + 
+  geom_line(aes(y = fitted)) + 
+  # geom_rect(aes(xmin = years[1], xmax = years[5], ymin = min(total_biomass), ymax = max(total_biomass), time = "begin"), alpha = 0, color = "black")+ 
+  # geom_rect(data=  mutate(dat_dynamics, time = "end"), aes(xmin = years[length(years) - 4], xmax = years[length(years)], ymin = min(total_biomass), ymax = max(total_biomass),linetype = time), alpha = 0, color = "black")+
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
+  theme(legend.position = "none") +
+  xlab("Year") +
+  ylab("Biomass")
+
+
+dat_glm_e <- glm(total_energy ~ timeperiod * source, data = dat_dynamics, family= Gamma(link = "log"))
+
+
+dat_dynamics_e <- dat_dynamics %>%
+  mutate(fitted = predict(dat_glm_e, type = "response")) %>%
+  mutate(Dynamics = ifelse(source == "sim", "Abundance driven", "Observed")) %>%
+  mutate(time = "begin") 
+
+timeseries_plot_e <- ggplot(dat_dynamics_e, aes(timeperiod, total_energy, color = Dynamics)) +
+  geom_point() + 
+  geom_line() + 
+  geom_line(aes(y = fitted)) + 
+  # geom_rect(aes(xmin = years[1], xmax = years[5], ymin = min(total_biomass), ymax = max(total_biomass), time = "begin"), alpha = 0, color = "black")+ 
+  # geom_rect(data=  mutate(dat_dynamics, time = "end"), aes(xmin = years[length(years) - 4], xmax = years[length(years)], ymin = min(total_biomass), ymax = max(total_biomass),linetype = time), alpha = 0, color = "black")+
+  scale_color_viridis_d(option = "cividis",begin = .2,  end = .8) + 
+  theme(legend.position = "none") +
+  xlab("Year") +
+  ylab("Energy use")
+
+
+
+#timeseries_plot
+```
+
+```{r, fig.dim = c(6,9)}
+two_plots <- multi_panel_figure(columns = 1 ,height = c(2,2,2.25), unit = "in") %>%
+  fill_panel(timeseries_plot) %>%
+  fill_panel(timeseries_plot_e) %>%
+  fill_panel(isd_plots)
+
+two_plots
+```
