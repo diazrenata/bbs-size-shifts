@@ -471,6 +471,9 @@ winning_fits_both_compare <- winning_fits_both_spmean %>%
 
 mean(winning_fits_both_compare$same_outcome)
 
+not_same_outcome <- filter(winning_fits_both_compare, !same_outcome) %>%
+  select(matssname_spmean, model_formula, model_formula_spmean)
+
 
 all_sims_compare <- all_sims_spmean %>%
   rename(total_energy_spmean = total_energy,

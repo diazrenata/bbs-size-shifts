@@ -190,7 +190,7 @@ all_interaction_wide %>%
 
 What stands out to me about this is that, in instances where they show different "syndromes" (left panel), usually the slope for energy use is less positive than for biomass (90% of the time for these routes; this is somewhat overrepresented compared to 78% of the time for routes with the same "syndrome"). 
 
-```{r, fig.dim = c(7,7)}
+```{r, fig.dim = c(6,4)}
 ggplot(all_interaction_wide, aes(ratio_real_Biomass, ratio_real_Energy_use, color = Syndrome_Energy_use, shape = Syndrome_Biomass)) + 
   geom_point() + 
   facet_wrap(vars(Same_syndrome)) + 
@@ -200,7 +200,9 @@ ggplot(all_interaction_wide, aes(ratio_real_Biomass, ratio_real_Energy_use, colo
   geom_vline(xintercept = 1) + 
   geom_hline(yintercept = 1) +
   theme(legend.position = "bottom") +
-  scale_color_viridis_d(end = .8)
+  scale_color_viridis_d(end = .8) +
+  xlab("Biomass\nRatio last:first fitted value") +
+  ylab("Energy use\nRatio last:first fitted value")
 # 
 # all_interaction_wide %>%
 #   filter(Same_syndrome == "Different syndromes") %>%
@@ -387,6 +389,10 @@ two_plots
 
 
 ## Sample route with the same syndrome
+
+Contrast this with a route where biomass and energy use show the same "syndrome" and the same general dynamics. For this route, both biomass and energy use show the "decoupled trends" syndrome. Abundance has declined, but both biomass and energy use have increased.
+
+My intuition is that when and why changes in energy use and biomass are similar enough to show the same or different broad types of dynamics come down to the nuances of where in the size spectrum change occurs. If (as is the most common scenario in this dataset) mean individual body size increases, mean metabolic flux will also increase but to a lesser degree due to the sub-1 scaling relationship. Depending on 
 
 ```{r}
 
